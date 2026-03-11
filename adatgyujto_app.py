@@ -137,6 +137,8 @@ if st.button("🚀 SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
     }
 
     all_runs_errors = []
+    s_work = t_work = c_work = 0  # Inicializálás
+    
     my_bar = st.progress(0, text="Szimulációk futtatása...")
 
     for i in range(in_runs):
@@ -164,15 +166,17 @@ if st.button("🚀 SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
         d_big = (len(c_large) / area_big_circle) if area_big_circle > 0 else 0
         c_dens = d_small + d_big
         
-        if c_dens > 0:
+        if c_dens > 0 and (len(c_small) > 0 or len(c_large) > 0):
             avg_h_small = c_small['height'].mean() if len(c_small) > 0 else 0
             avg_h_large = c_large['height'].mean() if len(c_large) > 0 else 0
+            avg_chew_small = c_small['chewed'].mean() if len(c_small) > 0 else 0
+            avg_chew_large = c_large['chewed'].mean() if len(c_large) > 0 else 0
             c_height_avg = (d_small * avg_h_small + d_big * avg_h_large) / c_dens
-            c_chew = ((d_small * c_small['chewed'].mean() + d_big * c_large['chewed'].mean()) / c_dens) * 100
+            c_chew = ((d_small * avg_chew_small + d_big * avg_chew_large) / c_dens) * 100
         else:
             c_height_avg = c_chew = 0
 
-        # Munkaidő
+        # Munkaidő (első futás alapján)
         s_work = (len(current_df) * 3.4) / 60
         t_work = (len(t_df) * 3.4) / 60
         c_work = (len(c_df) * 3.4) / 60
@@ -188,6 +192,7 @@ if st.button("🚀 SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
         })
         my_bar.progress((i + 1) / in_runs)
 
+    # **HIBAJAVÍTÁS: errors_df létrehozása**
     errors_df = pd.DataFrame(all_runs_errors)
     my_bar.empty()
 
@@ -241,4 +246,3 @@ if st.button("🚀 SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
     st.table(pd.DataFrame(mape_table))
     st.info(f"**Munkaidő:** S: {s_work:.1f} | T: {t_work:.1f} | C: {c_work:.1f} perc")
 
-  
