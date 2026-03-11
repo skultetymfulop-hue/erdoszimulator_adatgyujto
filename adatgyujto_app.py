@@ -8,6 +8,7 @@ from scipy import stats
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.patches as patches
 import plotly.express as px
+from streamlit_gsheets import GSheetsConnection
 
 # --- 1. ALAPBEÁLLÍTÁSOK ---
 st.set_page_config(page_title="Profi Erdő Szimulátor", layout="centered")
@@ -328,6 +329,26 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
 
     st.subheader("📋 Összesített mérési eredmény (100 futás átlaga)")
     st.dataframe(pd.DataFrame([summary_row]))
+  # --- GOOGLE SHEETS MENTÉS ---
+    try:
+        # Kapcsolat létrehozása
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        
+        # A jelenlegi adatok beolvasása a táblázatból
+        # (Fontos: a worksheet neve egyezzen a táblázat fülének nevével, pl. "Sheet1")
+        existing_data = conn.read(worksheet="Sheet1", ttl=0)
+        
+        # Az új sor hozzáadása a meglévőkhöz
+        new_row_df = pd.DataFrame([summary_row])
+        updated_df = pd.concat([existing_data, new_row_df], ignore_index=True)
+        
+        # A teljes táblázat frissítése az új sorral
+        conn.update(worksheet="Sheet1", data=updated_df)
+        
+        st.success("✅ Az adatok automatikusan mentve a Google Táblázatba!")
+    except Exception as e:
+        st.warning(f"⚠️ Megjelenítés sikerült, de a Google Sheets mentésnél hiba történt: {e}")
+        st.info("Ellenőrizd, hogy a Google Táblázatod fülének neve 'Sheet1'-e, és a Megosztás beállításnál 'Szerkesztő' jogot adtál-e bárkinek, aki rendelkezik a linkkel.")
 
     col1, col2 = st.columns(2)
     with col1:
