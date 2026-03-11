@@ -228,7 +228,8 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
     res_df = pd.DataFrame(all_runs_errors)
 
     summary_row = {
-        "In_Sűrűség": f"{in_intensity:.5f}",
+        "ID": int(new_id)
+        "In_Sűrűség": f"(in_intensity)",
         "In_Csomósodás": int(in_grav_str),
         "In_Rágottság": int(in_chewed),
         "MAPE_Sűrűség_T (%)": round(float(res_df['err_dens_T'].mean() * 100), 2),
