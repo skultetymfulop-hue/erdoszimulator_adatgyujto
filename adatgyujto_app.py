@@ -328,25 +328,26 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
     }
     st.subheader("📋 Összesített mérési eredmény (100 futás átlaga)")
     st.dataframe(pd.DataFrame([summary_row]))
-  # --- GOOGLE SHEETS MENTÉS ---
+  
+    # --- GOOGLE SHEETS MENTÉS ---
     try:
         # Kapcsolat létrehozása
         conn = st.connection("gsheets", type=GSheetsConnection)
         
-        # A jelenlegi adatok beolvasása a táblázatból
-        # (Fontos: a worksheet neve egyezzen a táblázat fülének nevével, pl. "")
-        existing_data = conn.read(worksheet="Sheet1", ttl=0)
+        # FONTOS: Itt a tényleges fül nevét használd (Sheet1 vagy Munkalap1)
+        target_sheet = "Sheet1" 
         
-        # Az új sor hozzáadása a meglévőkhöz
+        # A jelenlegi adatok beolvasása
+        existing_data = conn.read(worksheet=target_sheet, ttl=0)
+        
+        # Az új sor hozzáadása
         new_row_df = pd.DataFrame([summary_row])
         updated_df = pd.concat([existing_data, new_row_df], ignore_index=True)
         
-        # A teljes táblázat frissítése az új sorral
-        conn.update(worksheet="Sheet1", data=updated_df)
+        # A teljes táblázat frissítése
+        conn.update(worksheet=target_sheet, data=updated_df)
         
-        st.success("✅ Az adatok automatikusan mentve a Google Táblázatba!")
+        st.success(f"✅ Az adatok automatikusan mentve a Google Táblázatba ({target_sheet})!")
     except Exception as e:
-        st.warning(f"⚠️ Megjelenítés sikerült, de a Google Sheets mentésnél hiba történt: {e}")
-        st.info("Ellenőrizd, hogy a Google Táblázatod fülének neve 'Munkalap1'-e, és a Megosztás beállításnál 'Szerkesztő' jogot adtál-e bárkinek, aki rendelkezik a linkkel.")
-
-    
+        st.warning(f"⚠️ Megjelenítés sikerült, de a mentésnél hiba történt: {e}")
+        st.info(f"Ellenőrizd: 1. A fül neve pontosan '{target_sheet}'? 2. A 'Secrets' linkje jó? 3. Szerkesztési jogot adtál a link birtokosainak?")
