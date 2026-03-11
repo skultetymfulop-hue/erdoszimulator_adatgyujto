@@ -335,8 +335,8 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
         conn = st.connection("gsheets", type=GSheetsConnection)
         
         # A jelenlegi adatok beolvasása a táblázatból
-        # (Fontos: a worksheet neve egyezzen a táblázat fülének nevével, pl. "Sheet1")
-        existing_data = conn.read(worksheet="Sheet1", ttl=0)
+        # (Fontos: a worksheet neve egyezzen a táblázat fülének nevével, pl. "")
+        existing_data = conn.read(worksheet="Munkalap1", ttl=0)
         
         # Az új sor hozzáadása a meglévőkhöz
         new_row_df = pd.DataFrame([summary_row])
