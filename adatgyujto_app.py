@@ -204,9 +204,11 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
         current_df = run_forest_simulation(sim_params)
         s_dens = len(current_df) / (width * height)
         s_chew = current_df['chewed'].mean() * 100
+        
         t_df = current_df[current_df['T'] == 1]
         t_dens = (1 / (2.0 * t_df['height'] * L_transsect)).sum() if len(t_df)>0 else 0
         t_chew = t_df['chewed'].mean() * 100 if len(t_df)>0 else 0
+        
         c_df = current_df[current_df['C'] == 1]
         c_small = c_df[c_df['height'] <= 50]
         c_large = c_df[c_df['height'] > 50]
@@ -227,43 +229,43 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
     progress_bar.empty()
     res_df = pd.DataFrame(all_runs_errors)
 
-    summary_row = {
-        #"ID": int(new_id)
-        "In_Sűrűség": f"(in_intensity)",
-        "In_Csomósodás": int(in_grav_str),
-        "In_Rágottság": int(in_chewed),
-        "MAPE_Sűrűség_T (%)": round(float(res_df['err_dens_T'].mean() * 100), 2),
-        "MAPE_Rágottság_T (%)": round(float(res_df['err_chew_T'].mean() * 100), 2),
-        "MAPE_Sűrűség_C (%)": round(float(res_df['err_dens_C'].mean() * 100), 2),
-        "MAPE_Rágottság_C (%)": round(float(res_df['err_chew_C'].mean() * 100), 2)
-    }
-
-    st.subheader("📋 Összesített mérési eredmény")
-    st.dataframe(pd.DataFrame([summary_row]))
-
-    # --- GOOGLE SHEETS MENTÉS (Most már az IF blokkon BELÜL van!) ---
+    # 1. Először kapcsolódunk, hogy megkapjuk a következő ID-t
     try:
         conn = st.connection("gsheets", type=GSheetsConnection)
         target_sheet = "Sheet1"
-        
         try:
             existing_data = conn.read(worksheet=target_sheet, ttl=0)
-        except Exception:
+        except:
             existing_data = pd.DataFrame()
 
         if not existing_data.empty and "ID" in existing_data.columns:
-            last_id = pd.to_numeric(existing_data["ID"]).max()
+            last_id = pd.to_numeric(existing_data["ID"], errors='coerce').max()
             new_id = int(last_id + 1) if not np.isnan(last_id) else 1
         else:
             new_id = 1
 
-        summary_row["ID"] = new_id  # Hozzáadjuk az ID-t a mentés előtt
-        
+        # 2. Most állítjuk össze a sort, immár a biztos ID-val és számmá alakított sűrűséggel
+        summary_row = {
+            "ID": new_id,
+            "In_Sűrűség": float(in_intensity), 
+            "In_Csomósodás": int(in_grav_str),
+            "In_Rágottság": int(in_chewed),
+            "MAPE_Sűrűség_T (%)": round(float(res_df['err_dens_T'].mean() * 100), 2),
+            "MAPE_Rágottság_T (%)": round(float(res_df['err_chew_T'].mean() * 100), 2),
+            "MAPE_Sűrűség_C (%)": round(float(res_df['err_dens_C'].mean() * 100), 2),
+            "MAPE_Rágottság_C (%)": round(float(res_df['err_chew_C'].mean() * 100), 2)
+        }
+
+        # Megjelenítés
+        st.subheader("📋 Összesített mérési eredmény")
+        st.dataframe(pd.DataFrame([summary_row]))
+
+        # Mentés
         new_row_df = pd.DataFrame([summary_row])
         updated_df = pd.concat([existing_data, new_row_df], ignore_index=True)
         
         conn.update(worksheet=target_sheet, data=updated_df)
-        st.success(f"✅ Mentve! Új sorszám: {new_id}")
+        st.success(f"✅ Mentve a táblázatba! (ID: {new_id})")
 
     except Exception as e:
-        st.error(f"Hiba történt a sorszámozott mentésnél: {e}")
+        st.error(f"Hiba történt: {e}")
