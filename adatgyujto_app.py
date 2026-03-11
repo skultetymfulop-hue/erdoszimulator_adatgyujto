@@ -2,9 +2,8 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import math
-from streamlit_gsheets import GSheetsConnection
 
-# --- 1. ALAPBEÁLLÍTÁSOK ---
+# --- ALAPBEÁLLÍTÁSOK ---
 st.set_page_config(page_title="Profi Erdő Szimulátor", layout="centered")
 
 width, height = 1500, 1500
@@ -33,7 +32,6 @@ def get_weighted_height_mean(df_subset, is_transzekt=False):
     else:
         return df_subset['height'].mean()
 
-# --- 2. SZIMULÁCIÓS FÜGGVÉNY ---
 def run_forest_simulation(params):
     target_intensity = params['intensity']
     grav_str = params['grav_str']
@@ -126,42 +124,28 @@ def run_forest_simulation(params):
     
     return pd.DataFrame(results)
 
-# --- 3. GOOGLE SHEETS KAPCSOLAT ---
-@st.cache_resource
-def get_gsheets_connection():
-    return st.connection("gsheets", type=GSheetsConnection)
+# --- FELÜLET ---
+st.title("🌲 Profi Erdő Szimulátor")
+st.markdown("**Monitoring módszerek tesztelése szimulált környezetben**")
 
-# --- 4. FELHASZNÁLÓI FELÜLET ---
-st.title("🌲 Monitoring módszerek tesztelése szimulált környezetben")
-
-st.markdown("""
-Ez a szimulátor egy virtuális újulat csoportot generál, ahol a Transzektes és Mintakörös vadhatás monitoring módszereket tesztelheted.
-**Minden gombnyomásnál az eredmények automatikusan mentődnek Google Sheets-be!**
-""")
-
-# === SIDEBAR ===
 with st.sidebar:
     st.header("⚙️ Beállítások")
-    in_intensity = st.slider("Cél sűrűség (db/cm²)", 0.00005, 0.005, 0.0020, step=0.00005, format="%.5f")
-    in_mode = st.slider("Leggyakoribb magasság (módusz)", 5, 50, 15)
-    in_shape = st.slider("Változatosság (alacsonyabb = több óriás fa)", 1.2, 5.0, 2.0)
-    in_grav_str = st.slider("Sűrűsödési erő", 0, 10, 3)
-    in_grav_points = st.slider("Sűrűsödési pontok száma", 1, 5, 3)
-    in_chewed = st.slider("Valódi rágottság (%)", 0, 100, 30)
-    in_runs = st.slider("Szimulációs futások száma", 2, 100, 5)
+    in_intensity = st.slider("Sűrűség (db/cm²)", 0.00005, 0.005, 0.0020, step=0.00005, format="%.5f")
+    in_mode = st.slider("Módusz (magasság)", 5, 50, 15)
+    in_shape = st.slider("Változatosság", 1.2, 5.0, 2.0)
+    in_grav_str = st.slider("Sűrűsödés", 0, 10, 3)
+    in_grav_points = st.slider("Sűrűsödési pontok", 1, 5, 3)
+    in_chewed = st.slider("Rágottság %", 0, 100, 30)
+    in_runs = st.slider("Futások", 2, 100, 5)
 
     if 'KTT' not in st.session_state: st.session_state['KTT'] = 20
-    p_ktt = st.slider("Kocsánytalan Tölgy (%)", 0, 100, key='KTT')
-    p_gy = st.slider("Gyertyán (%)", 0, 100, key='Gy')
-    p_mj = st.slider("Mezei Juhar (%)", 0, 100, key='MJ')
-    p_mcs = st.slider("Madárcseresznye (%)", 0, 100, key='MCs')
+    p_ktt = st.slider("KTT %", 0, 100, key='KTT')
+    p_gy = st.slider("Gy %", 0, 100, key='Gy')
+    p_mj = st.slider("MJ %", 0, 100, key='MJ')
+    p_mcs = st.slider("MCs %", 0, 100, key='MCs')
     p_babe = max(0, 100 - (p_ktt + p_gy + p_mj + p_mcs))
-    st.info(f"Barkóca Berkenye (maradék): {p_babe}%")
-    
-    st.markdown("---")
-    st.caption("**Készítette:** Skultéty Fülöp")
+    st.info(f"BaBe %: {p_babe}")
 
-# === SZIMULÁCIÓ GOMB ===
 if st.button("🚀 SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
     raw_probs = np.array([p_ktt, p_gy, p_mj, p_mcs, p_babe], dtype=float)
     corrected_probs = raw_probs / raw_probs.sum()
@@ -169,15 +153,14 @@ if st.button("🚀 SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
     sim_params = {
         'intensity': in_intensity, 'mode': in_mode, 'shape_k': in_shape, 
         'grav_str': in_grav_str, 'chewed_p': in_chewed/100,
-        'n_grav': in_grav_points, 'sp_names': ['KTT', 'Gy', 'MJ', 'MCs', 'BaBe'],
+        'n_grav': in_grav_points, 
+        'sp_names': ['KTT', 'Gy', 'MJ', 'MCs', 'BaBe'],
         'sp_probs': corrected_probs 
     }
 
     all_runs_errors = []
-    s_work = t_work = c_work = 0
-    
-    my_bar = st.progress(0, text="Szimulációk futtatása...")
-    
+    my_bar = st.progress(0)
+
     for i in range(in_runs):
         current_df = run_forest_simulation(sim_params)
         t_df = current_df[current_df['T'] == 1]
@@ -185,34 +168,28 @@ if st.button("🚀 SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
         
         s_dens = len(current_df) / (width * height)
         s_height_avg = get_weighted_height_mean(current_df)
-        s_chew = current_df['chewed'].mean() * 100
+        s_chew = current_df['chewed'].mean() * 100 if len(current_df) > 0 else 0
 
         if len(t_df) > 0:
             t_density = (1 / (2.0 * t_df['height'] * L_transsect)).sum()
             t_height_avg = get_weighted_height_mean(t_df, is_transzekt=True)
             t_chew = t_df['chewed'].mean() * 100
         else:
-            t_density = t_height_avg = t_chew = 0.0
-        
+            t_density = t_height_avg = t_chew = 0
+
         c_small = c_df[c_df['height'] <= 50]
         c_large = c_df[c_df['height'] > 50]
-        d_small = (len(c_small) / area_small_circles) if area_small_circles > 0 else 0
-        d_big = (len(c_large) / area_big_circle) if area_big_circle > 0 else 0
+        d_small = len(c_small) / area_small_circles if area_small_circles > 0 else 0
+        d_big = len(c_large) / area_big_circle if area_big_circle > 0 else 0
         c_dens = d_small + d_big
         
-        if c_dens > 0 and (len(c_small) > 0 or len(c_large) > 0):
+        if c_dens > 0:
             avg_h_small = c_small['height'].mean() if len(c_small) > 0 else 0
             avg_h_large = c_large['height'].mean() if len(c_large) > 0 else 0
-            avg_chew_small = c_small['chewed'].mean() if len(c_small) > 0 else 0
-            avg_chew_large = c_large['chewed'].mean() if len(c_large) > 0 else 0
             c_height_avg = (d_small * avg_h_small + d_big * avg_h_large) / c_dens
-            c_chew = ((d_small * avg_chew_small + d_big * avg_chew_large) / c_dens) * 100
+            c_chew = c_df['chewed'].mean() * 100 if len(c_df) > 0 else 0
         else:
             c_height_avg = c_chew = 0
-
-        s_work = (len(current_df) * 3.4) / 60
-        t_work = (len(t_df) * 3.4) / 60
-        c_work = (len(c_df) * 3.4) / 60
 
         all_runs_errors.append({
             't_err_dens': abs((s_dens - t_density) / s_dens) if s_dens > 0 else 0,
@@ -227,25 +204,32 @@ if st.button("🚀 SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
     errors_df = pd.DataFrame(all_runs_errors)
     my_bar.empty()
 
-    # GOOGLE SHEETS MENTÉS
-    try:
-        conn = get_gsheets_connection()
-        existing_data = conn.read()
-        new_id = 1 if len(existing_data) == 0 else int(existing_data['ID'].max()) + 1
-        
-        avg_mape = {
-            't_dens': errors_df['t_err_dens'].mean()*100,
-            't_height': errors_df['t_err_height'].mean()*100,
-            't_chew': errors_df['t_err_chew'].mean()*100,
-            'c_dens': errors_df['c_err_dens'].mean()*100,
-            'c_height': errors_df['c_err_height'].mean()*100,
-            'c_chew': errors_df['c_err_chew'].mean()*100
-        }
-        
-        sheet_row = {
-            'ID': new_id, 'Dátum': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'Sűrűség': in_intensity, 'Módusz': in_mode, 'Shape': in_shape,
-            'Gravitáció': in_grav_str, 'Grav_pontok': in_grav_points, 'Rágottság_%': in_chewed,
-            'Futások': in_runs, 'KTT_%': p_ktt, 'Gy_%': p_gy, 'MJ_%': p_mj, 
-            'MCs_%': p_mcs, 'BaBe_%': p_babe,
-            'T_Dens_MAPE': avg_mape['t_dens'], 'T_Height
+    st.success("✅ Szimuláció kész!")
+    st.balloons()
+
+    # EREDMÉNYEK
+    st.subheader(f"📈 MAPE eredmények ({in_runs} futás)")
+    mape_table = {
+        " ": ["Sűrűség", "Magasság", "Rágottság"],
+        "Transzekt": [
+            f"{errors_df['t_err_dens'].mean()*100:.1f}%", 
+            f"{errors_df['t_err_height'].mean()*100:.1f}%", 
+            f"{errors_df['t_err_chew'].mean()*100:.1f}%"
+        ],
+        "Mintakör": [
+            f"{errors_df['c_err_dens'].mean()*100:.1f}%", 
+            f"{errors_df['c_err_height'].mean()*100:.1f}%", 
+            f"{errors_df['c_err_chew'].mean()*100:.1f}%"
+        ]
+    }
+    st.table(pd.DataFrame(mape_table))
+
+    # CSV LETÖLTÉS
+    csv = errors_df.describe().round(4)
+    timestamp = pd.Timestamp.now().strftime('%Y%m%d_%H%M')
+    st.download_button(
+        "💾 CSV LETÖLTÉS", 
+        csv.to_csv(), 
+        f"erdo_szimulator_{timestamp}.csv",
+        "text/csv"
+    )
