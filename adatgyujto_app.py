@@ -329,30 +329,46 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
     st.subheader("📋 Összesített mérési eredmény (100 futás átlaga)")
     st.dataframe(pd.DataFrame([summary_row]))
   
-# --- GOOGLE SHEETS MENTÉS (HIBAJAVÍTOTT VERZIÓ) ---
+# --- GOOGLE SHEETS MENTÉS SORSZÁMOZÁSSAL ---
+try:
+    conn = st.connection("gsheets", type=GSheetsConnection)
+    target_sheet = "Sheet1"
+    
+    # 1. Beolvassuk a jelenlegi adatokat
     try:
-        conn = st.connection("gsheets", type=GSheetsConnection)
-        target_sheet = "Sheet1" 
-        
-        # Megpróbáljuk beolvasni, de ha nem megy (pl. 404), üres táblázatot feltételezünk
-        try:
-            existing_data = conn.read(worksheet=target_sheet, ttl=0)
-        except Exception:
-            existing_data = pd.DataFrame()
-        
-        # Új sor hozzáadása
-        new_row_df = pd.DataFrame([summary_row])
-        
-        if not existing_data.empty:
-            updated_df = pd.concat([existing_data, new_row_df], ignore_index=True)
-        else:
-            updated_df = new_row_df
-        
-        # Frissítés kényszerítése
-        conn.update(worksheet=target_sheet, data=updated_df)
-        st.success(f"✅ Mentve a Google Táblázatba!")
-        
-    except Exception as e:
-        st.error(f"Hiba történt: {e}")
-        # Kiírjuk a pontos hiba típusát a diagnózishoz
-        st.info("Próbáld meg frissíteni az oldalt (F5), néha a kapcsolat alaphelyzetbe állítása segít.")
+        existing_data = conn.read(worksheet=target_sheet, ttl=0)
+    except Exception:
+        existing_data = pd.DataFrame()
+
+    # 2. Sorszám meghatározása
+    if not existing_data.empty and "ID" in existing_data.columns:
+        # Megkeressük a legnagyobb számot és adunk hozzá 1-et
+        # Ha nem szám van ott, hibát kerülünk a pd.to_numeric-kel
+        last_id = pd.to_numeric(existing_data["ID"]).max()
+        if np.isnan(last_id): last_id = 0
+        new_id = int(last_id + 1)
+    else:
+        # Ha tök üres a táblázat, 1-essel kezdünk
+        new_id = 1
+
+    # 3. Az új sor összeállítása (Dátum helyett ID-val)
+    summary_row = {
+        "ID": new_id,
+        "In_Sűrűség": f"{in_intensity:.5f}",
+        "In_Csomósodás": int(in_grav_str),
+        "In_Rágottság": int(in_chewed),
+        "MAPE_Sűrűség_T (%)": round(float(res_df['err_dens_T'].mean() * 100), 2),
+        "MAPE_Rágottság_T (%)": round(float(res_df['err_chew_T'].mean() * 100), 2),
+        "MAPE_Sűrűség_C (%)": round(float(res_df['err_dens_C'].mean() * 100), 2),
+        "MAPE_Rágottság_C (%)": round(float(res_df['err_chew_C'].mean() * 100), 2)
+    }
+
+    # 4. Adatok összefűzése és feltöltése
+    new_row_df = pd.DataFrame([summary_row])
+    updated_df = pd.concat([existing_data, new_row_df], ignore_index=True)
+    
+    conn.update(worksheet=target_sheet, data=updated_df)
+    st.success(f"✅ Mentve! Új sorszám: {new_id}")
+
+except Exception as e:
+    st.error(f"Hiba történt a sorszámozott mentésnél: {e}")
