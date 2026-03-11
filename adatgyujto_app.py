@@ -1,27 +1,16 @@
-import gspread
+import streamlit as st
 from google.oauth2.service_account import Credentials
+import gspread
 
-# 1. Beállítások - Másold ide a JSON fájlod tartalmát vagy az útvonalát
-scope = ["https://www.googleapis.com/auth/spreadsheets"]
-creds = Credentials.from_service_account_info({
-    "type": "service_account",
-    "project_id": "genial-acronym-489918-a6",
-    "private_key_id": "85c43711722d4586bfaca301bf5e186b41d923f1",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDpIW15OnV0ZZKV\n...", # Ide a teljes kulcs kell
-    "client_email": "erdo-mentes@genial-acronym-489918-a6.iam.gserviceaccount.com",
-    "token_uri": "https://oauth2.googleapis.com/token",
-}, scopes=scope)
+# A Secrets-ből olvassuk ki a szótárat
+creds_dict = st.secrets["gcp_service_account"]
 
+scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
 client = gspread.authorize(creds)
 
-# 2. Tesztelés
-spreadsheet_id = "10DyyNfaYh0C9orj-F_Go8Har46Tsm1JNISzecQ1dcIc"
+# Most már próbálhatod nyitni a táblázatot
+spreadsheet_url = "https://docs.google.com/spreadsheets/d/10DyyNfaYh0C9orj-F_Go8Har46Tsm1JNISzecQ1dcIc/edit"
+sheet = client.open_by_url(spreadsheet_url).sheet1
 
-try:
-    sheet = client.open_by_key(spreadsheet_id).sheet1
-    data = sheet.get_all_records()
-    print("✅ SIKER! A kapcsolat él.")
-    print(f"Az első sor adatai: {data[0] if data else 'Üres a táblázat'}")
-except Exception as e:
-    print("❌ HIBA történt:")
-    print(e)
+st.success("Sikerült csatlakozni!")
