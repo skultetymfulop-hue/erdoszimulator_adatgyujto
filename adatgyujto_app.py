@@ -233,7 +233,7 @@ with st.sidebar:
     in_grav_str = st.slider("Sűrűsödési erő", 0, 10, 3)
     in_grav_points = st.slider("Sűrűsödési pontok száma", 1, 5, 3)
     in_chewed = st.slider("Valódi rágottság (%)", 0, 100, 30)
-    in_runs = st.slider("Szimulációs futások száma", 2, 100, 5)
+    in_runs = 100
 
     if 'KTT' not in st.session_state: st.session_state['KTT'] = 20
     if 'Gy' not in st.session_state: st.session_state['Gy'] = 20
