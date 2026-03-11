@@ -319,14 +319,13 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
     summary_row = {
         "Dátum": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M"),
         "In_Sűrűség": f"{in_intensity:.5f}",
-        "In_Csomósodás": in_grav_str,
-        "In_Rágottság": in_chewed,
-        "MAPE_Sűrűség_T (%)": float(res_df['err_dens_T'].mean() * 100),
-        "MAPE_Rágottság_T (%)": float(res_df['err_chew_T'].mean() * 100),
-        "MAPE_Sűrűség_C (%)": float(res_df['err_dens_C'].mean() * 100),
-        "MAPE_Rágottság_C (%)": float(res_df['err_chew_C'].mean() * 100)
+        "In_Csomósodás": int(in_grav_str),
+        "In_Rágottság": int(in_chewed),
+        "MAPE_Sűrűség_T (%)": round(float(res_df['err_dens_T'].mean() * 100), 2),
+        "MAPE_Rágottság_T (%)": round(float(res_df['err_chew_T'].mean() * 100), 2),
+        "MAPE_Sűrűség_C (%)": round(float(res_df['err_dens_C'].mean() * 100), 2),
+        "MAPE_Rágottság_C (%)": round(float(res_df['err_chew_C'].mean() * 100), 2)
     }
-
     st.subheader("📋 Összesített mérési eredmény (100 futás átlaga)")
     st.dataframe(pd.DataFrame([summary_row]))
   # --- GOOGLE SHEETS MENTÉS ---
