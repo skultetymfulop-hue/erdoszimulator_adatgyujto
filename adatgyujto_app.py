@@ -265,186 +265,69 @@ with st.sidebar:
     st.sidebar.caption("**Készítette:**")
     st.sidebar.info(" Skultéty Fülöp skultetymfulop@gmail.com")
 
-if st.button("SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
+# --- EZ AZ ÚJ ADATGYŰJTŐ BLOKK ---
+if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_width=True):
     raw_probs = np.array([p_ktt, p_gy, p_mj, p_mcs, p_babe], dtype=float)
     corrected_probs = raw_probs / raw_probs.sum()
 
     sim_params = {
         'intensity': in_intensity, 'mode': in_mode, 'shape_k': in_shape, 'grav_str': in_grav_str,
-        'chewed_p': in_chewed,
-        'n_grav': in_grav_points,
+        'chewed_p': in_chewed, 'n_grav': in_grav_points,
         'sp_names': ['KTT', 'Gy', 'MJ', 'MCs', 'BaBe'],
         'sp_probs': corrected_probs 
     }
 
     all_runs_errors = []
-    first_run_stats = {}
-    first_df = None
-    my_bar = st.progress(0, text="Szimulációk futtatása...")
+    progress_bar = st.progress(0, text="Adatgyűjtés folyamatban (100 futás)...")
 
-    for i in range(in_runs):
+    for i in range(100):
         current_df = run_forest_simulation(sim_params)
-        t_df = current_df[current_df['T'] == 1]
-        c_df = current_df[current_df['C'] == 1]
         
-        # 1. VALÓDI ÉRTÉKEK
+        # Alapértékek
         s_dens = len(current_df) / (width * height)
         s_height_avg = get_weighted_height_mean(current_df)
         s_chew = current_df['chewed'].mean() * 100
 
-        # 2. TRANSZEKT BECSLÉS
-        if len(t_df) > 0:
-            t_density = (1 / (2.0 * t_df['height'] * L_transsect)).sum()
-            t_height_avg = get_weighted_height_mean(t_df, is_transzekt=True)
-            t_chew = t_df['chewed'].mean() * 100
-        else:
-            t_density = t_height_avg = t_chew = 0.0
-        
-        # 3. MINTAKÖRÖS BECSLÉS
-       # 3. MINTAKÖRÖS BECSLÉS (Javított, rétegzett súlyozással)
+        # Módszerek becslései (T és C rövidítve a helytakarékosság miatt)
+        t_df = current_df[current_df['T'] == 1]
+        t_dens = (1 / (2.0 * t_df['height'] * L_transsect)).sum() if len(t_df)>0 else 0
+        t_chew = t_df['chewed'].mean() * 100 if len(t_df)>0 else 0
+
+        c_df = current_df[current_df['C'] == 1]
         c_small = c_df[c_df['height'] <= 50]
         c_large = c_df[c_df['height'] > 50]
-        
-        # Sűrűség számítása rétegenként
-        d_small = (len(c_small) / area_small_circles) if area_small_circles > 0 else 0
-        d_big = (len(c_large) / area_big_circle) if area_big_circle > 0 else 0
-        c_dens = d_small + d_big
+        d_s = (len(c_small) / area_small_circles) if area_small_circles > 0 else 0
+        d_l = (len(c_large) / area_big_circle) if area_big_circle > 0 else 0
+        c_dens = d_s + d_l
+        c_chew = (((d_s * c_small['chewed'].mean() if len(c_small)>0 else 0) + 
+                   (d_l * c_large['chewed'].mean() if len(c_large)>0 else 0)) / c_dens * 100) if c_dens > 0 else 0
 
-        # Súlyozott átlagmagasság és rágottság számítása
-        if c_dens > 0:
-            # Rétegátlagok kiszámítása
-            avg_h_small = c_small['height'].mean() if len(c_small) > 0 else 0
-            avg_h_large = c_large['height'].mean() if len(c_large) > 0 else 0
-            
-            avg_chew_small = c_small['chewed'].mean() if len(c_small) > 0 else 0
-            avg_chew_large = c_large['chewed'].mean() if len(c_large) > 0 else 0
-
-            # Súlyozás a becsült sűrűségek (D) alapján
-            c_height_avg = (d_small * avg_h_small + d_big * avg_h_large) / c_dens
-            c_chew = ((d_small * avg_chew_small + d_big * avg_chew_large) / c_dens) * 100
-        else:
-            c_height_avg = 0
-            c_chew = 0
-
-        # MAPE számítás (Módusz helyett Átlagmagasságra a stabilitásért)
+        # Hibák gyűjtése
         all_runs_errors.append({
-            't_err_dens': abs((s_dens - t_density) / s_dens) if s_dens > 0 else 0,
-            't_err_height': abs((s_height_avg - t_height_avg) / s_height_avg) if s_height_avg > 0 else 0,
-            't_err_chew': abs((s_chew - t_chew) / s_chew) if s_chew > 0 else 0,
-            'c_err_dens': abs((s_dens - c_dens) / s_dens) if s_dens > 0 else 0,
-            'c_err_height': abs((s_height_avg - c_height_avg) / s_height_avg) if s_height_avg > 0 else 0,
-            'c_err_chew': abs((s_chew - c_chew) / s_chew) if s_chew > 0 else 0
+            'err_dens_T': abs(s_dens - t_dens) / s_dens if s_dens > 0 else 0,
+            'err_chew_T': abs(s_chew - t_chew) / s_chew if s_chew > 0 else 0,
+            'err_dens_C': abs(s_dens - c_dens) / s_dens if s_dens > 0 else 0,
+            'err_chew_C': abs(s_chew - c_chew) / s_chew if s_chew > 0 else 0
         })
+        if i % 10 == 0: progress_bar.progress((i + 1) / 100)
 
-        if i == 0:
-            first_df = current_df
-            first_run_stats = {
-                'S_count': len(current_df), 'T_count': len(t_df), 'C_count': len(c_df),
-                'S_density': s_dens, 'T_density': t_density, 'C_density': c_dens,
-                'S_chewed': s_chew, 'T_chewed': t_chew, 'C_chewed': c_chew
-            }
-        my_bar.progress((i + 1) / in_runs)
+    progress_bar.empty()
+    res_df = pd.DataFrame(all_runs_errors)
 
-    my_bar.empty()
-
-    # --- TÁBLÁZATOK ---
-    errors_df = pd.DataFrame(all_runs_errors)
-    mape_table = {
-        "Sorok (MAPE)": ["MAPE_density", "MAPE_height_avg", "MAPE_chewed"],
-        "Transzekt (T)": [
-            f"{errors_df['t_err_dens'].mean()*100:.2f}%", 
-            f"{errors_df['t_err_height'].mean()*100:.2f}%", 
-            f"{errors_df['t_err_chew'].mean()*100:.2f}%"
-        ],
-        "Mintakör (C)": [
-            f"{errors_df['c_err_dens'].mean()*100:.2f}%", 
-            f"{errors_df['c_err_height'].mean()*100:.2f}%", 
-            f"{errors_df['c_err_chew'].mean()*100:.2f}%"
-        ]
-    }
-    #st.subheader(f"📈 MAPE eredmények ({in_runs} futás alapján)")
-   # st.table(pd.DataFrame(mape_table))
-  # Munkaigény kiszámítása (perc): (darabszám * 3.4) / 60
-    s_work = (first_run_stats['S_count'] * 3.4) / 60
-    t_work = (first_run_stats['T_count'] * 3.4) / 60
-    c_work = (first_run_stats['C_count'] * 3.4) / 60
-    summary_table = {
-       "Paraméter": [
-            "Darabszám (count)", 
-            "Becsült munkaigény (perc)", 
-            "Sűrűség (density)", 
-            "Rágottság (chewed_%)"
-        ],
-        "Szimuláció (S)": [
-            f"{first_run_stats['S_count']} db", 
-            f"{s_work:.1f} perc",
-            f"{first_run_stats['S_density']:.5f}", 
-            f"{first_run_stats['S_chewed']:.1f}%"
-        ],
-        "Transzekt (T)": [
-            f"{first_run_stats['T_count']} db", 
-            f"{t_work:.1f} perc",
-            f"{first_run_stats['T_density']:.5f}", 
-            f"{first_run_stats['T_chewed']:.1f}%"
-        ],
-        "Mintakör (C)": [
-            f"{first_run_stats['C_count']} db", 
-            f"{c_work:.1f} perc",
-            f"{first_run_stats['C_density']:.5f}", 
-            f"{first_run_stats['C_chewed']:.1f}%"
-        ]
-    }
-    #st.subheader("📊 Az első futás részletes eredményei")
-    #st.table(pd.DataFrame(summary_table))
-  # 1. LÉPÉS: Elmentjük az adatokat (még a gomb behúzásán belül!)
-    st.session_state['forest_data'] = {
-        'df': first_df,
-        'mape': mape_table,
-        'summary': summary_table,
-        's_percents': [p_ktt, p_gy, p_mj, p_mcs, p_babe],
-        'sp_list': ['KTT', 'Gy', 'MJ', 'MCs', 'BaBe'],
-        'in_chewed': in_chewed,
-        'runs_count': in_runs
+    # Eredmény sor összeállítása
+    summary_row = {
+        "Dátum": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M"),
+        "In_Sűrűség": f"{in_intensity:.5f}",
+        "In_Csomósodás": in_grav_str,
+        "In_Rágottság": in_chewed,
+        "MAPE_Sűrűség_T (%)": res_df['err_dens_T'].mean() * 100,
+        "MAPE_Rágottság_T (%)": res_df['err_chew_T'].mean() * 100,
+        "MAPE_Sűrűség_C (%)": res_df['err_dens_C'].mean() * 100,
+        "MAPE_Rágottság_C (%)": res_df['err_chew_C'].mean() * 100
     }
 
-# --- INNEN MÁR NINCS BEHÚZÁS (A GOMBON KÍVÜL VAGYUNK) ---
-
-if st.session_state['forest_data'] is not None:
-    # Adatok előhívása
-    d = st.session_state['forest_data']
-    df = d['df']
-    
-    # --- ELEGYARÁNY VIZUALIZÁCIÓ ---
-  # Itt hozzuk létre a táblázatokat, amik így nem tűnnek el!
-    st.subheader(f"📈 MAPE eredmények ({d['runs_count']} futás alapján)")
-    st.table(pd.DataFrame(d['mape']))
-
-    st.subheader("📊 Az első futás részletes eredményei")
-    st.table(pd.DataFrame(d['summary']))
-    st.markdown("---")
-    st.subheader("🌲 Fafaj-összetétel összehasonlítása (Első futás)")
-
-    def get_species_percentages(dataframe, species_list):
-        if len(dataframe) == 0: return [0] * len(species_list)
-        counts = dataframe['species'].value_counts(normalize=True) * 100
-        return [counts.get(sp, 0) for sp in species_list]
-
-    sp_list = d['sp_list']
-    s_percents = d['s_percents']
-    t_percents = get_species_percentages(df[df['T'] == 1], sp_list)
-    c_percents = get_species_percentages(df[df['C'] == 1], sp_list)
-
-    def draw_species_bar(label, percents):
-        cols_html = "".join([
-            f'<div style="width: {p}%; background-color: {species_colors[sp]}; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 10px; min-width: 0; overflow: hidden;">{f"{p:.1f}%" if p > 5 else ""}</div>'
-            for p, sp in zip(percents, sp_list) if p > 0
-        ])
-        st.write(f"**{label}**")
-        st.markdown(f'<div style="display: flex; height: 30px; width: 100%; border-radius: 5px; overflow: hidden; border: 1px solid #ddd; margin-bottom: 10px;">{cols_html}</div>', unsafe_allow_html=True)
-
-    draw_species_bar("Valódi összetétel (S)", s_percents)
-    draw_species_bar("Transzekt becslés (T)", t_percents)
-    draw_species_bar("Mintakör becslés (C)", c_percents)
+    st.subheader("📋 Összesített mérési eredmény (100 futás átlaga)")
+    st.dataframe(pd.DataFrame([summary_row]))
 
     col1, col2 = st.columns(2)
     with col1:
