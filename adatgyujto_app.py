@@ -330,7 +330,7 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
     st.dataframe(pd.DataFrame([summary_row]))
   
 # --- GOOGLE SHEETS MENTÉS SORSZÁMOZÁSSAL ---
-try:
+    try:
     conn = st.connection("gsheets", type=GSheetsConnection)
     target_sheet = "Sheet1"
     
