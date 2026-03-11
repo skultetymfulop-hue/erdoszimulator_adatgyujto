@@ -229,25 +229,29 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
     progress_bar.empty()
     res_df = pd.DataFrame(all_runs_errors)
 
-   # --- JAVÍTOTT ADATÖSSZESÍTÉS ÉS MENTÉS ---
+   # --- JAVÍTOTT ADATÖSSZESÍTÉS ÉS MENTÉS (CACHE TÖRLÉSSEL) ---
     try:
+        # Kapcsolat létrehozása
         conn = st.connection("gsheets", type=GSheetsConnection)
         target_sheet = "Sheet1"
         
-        # 1. Adatok beolvasása az ID számításhoz
+        # Kényszerített frissítés: ne a régi adatokat lássa a Streamlit
+        st.cache_data.clear() 
+        
         try:
+            # TTL=0 biztosítja, hogy a legfrissebb állapotot olvassuk be
             existing_data = conn.read(worksheet=target_sheet, ttl=0)
         except:
             existing_data = pd.DataFrame()
 
-        # 2. Következő ID meghatározása
+        # Következő ID meghatározása
         if not existing_data.empty and "ID" in existing_data.columns:
             last_id = pd.to_numeric(existing_data["ID"], errors='coerce').max()
-            new_id = int(last_id + 1) if not np.isnan(last_id) else 1
+            new_id = int(last_id + 1) if not (np.isnan(last_id) or last_id is None) else 1
         else:
             new_id = 1
 
-        # 3. A sor összeállítása PONTOSAN a te oszlopneveiddel
+        # A sor összeállítása
         summary_row = {
             "ID": new_id,
             "In_Sűrűség": float(in_intensity),
@@ -259,23 +263,29 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
             "MAPE_Rágottság_C (%)": round(float(res_df['err_chew_C'].mean() * 100), 2)
         }
 
-        # Megjelenítés a felületen
+        # Eredmény megjelenítése
         st.subheader("📋 Összesített mérési eredmény")
         st.dataframe(pd.DataFrame([summary_row]))
 
-        # 4. BIZTONSÁGI MENTÉS: Oszlopok kényszerített egyeztetése
+        # Új DataFrame létrehozása
         new_row_df = pd.DataFrame([summary_row])
         
+        # Ha már van adat a táblázatban, összefűzzük
         if not existing_data.empty:
-            # Csak azokat az oszlopokat tartjuk meg, amik a Sheets-ben is léteznek
-            new_row_df = new_row_df.reindex(columns=existing_data.columns)
+            # Csak azokat az oszlopokat tartjuk meg, amik közösen megvannak
+            # Ez a kulcslépés az INVALID_ARGUMENT elkerüléséhez
             updated_df = pd.concat([existing_data, new_row_df], ignore_index=True)
+            # Biztosítsuk, hogy nincsenek teljesen üres oszlopok, amik elrontják az API hívást
+            updated_df = updated_df.dropna(axis=1, how='all')
         else:
             updated_df = new_row_df
 
-        # Adatok feltöltése
+        # VÉGSŐ MENTÉS
         conn.update(worksheet=target_sheet, data=updated_df)
         st.success(f"✅ Sikeres mentés! Új sorszám: {new_id}")
 
     except Exception as e:
+        # Itt kiírjuk a pontos hiba részleteit is a hibakereséshez
         st.error(f"Hiba a mentés során: {e}")
+        if "existing_data" in locals():
+            st.write("Táblázatban talált oszlopok:", list(existing_data.columns))
