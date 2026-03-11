@@ -1,22 +1,50 @@
 import streamlit as st
-from google.oauth2.service_account import Credentials
-import gspread
+import pandas as pd
+from streamlit_gsheets import GSheetsConnection
 
-# 1. Beolvasás
-creds_dict = dict(st.secrets["gcp_service_account"])
+st.title("🧪 Google Sheets Kapcsolat Teszt")
 
-# 2. Kulcs tisztítása (ha mégis maradt benne manuális \n)
-creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+# Kapcsolat
+@st.cache_resource
+def get_connection():
+    return st.connection("gsheets", type=GSheetsConnection)
 
-# 3. Kapcsolódás
-scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
-gc = gspread.authorize(creds)
+conn = get_connection()
 
-# Teszteljük le egy létező táblázattal
+if "tesztelt" not in st.session_state:
+    st.session_state.tesztelt = False
+
+# 1. Olvasás teszt
 try:
-    # Itt a saját táblázatod ID-ját használd (az URL-ből a d/ utáni rész)
-    sh = gc.open_by_key("10DyyNfaYh0C9orj-F_Go8Har46Tsm1JNISzecQ1dcIc")
-    st.success("Sikerült! A táblázat elérhető.")
+    st.header("📖 Olvasás teszt")
+    df = conn.read(worksheet="Sheet1")  # Vagy "Example 1" ha van
+    st.success("✅ Olvasás OK!")
+    st.dataframe(df, use_container_width=True)
 except Exception as e:
-    st.error(f"A kulcs már jó, de a táblázatot nem érem el: {e}")
+    st.error(f"❌ Olvasás hiba: {e}")
+
+# 2. Írás teszt (gomb)
+st.header("✏️ Írás teszt")
+col1, col2 = st.columns(2)
+with col1:
+    datum = st.date_input("Dátum")
+with col2:
+    ertek = st.number_input("Érték", value=42.0)
+
+if st.button("Írj új sort!"):
+    uj_sor = pd.DataFrame({
+        "Dátum": [datum],
+        "Érték": [ertek],
+        "Teszt": ["Streamlit teszt - " + pd.Timestamp.now().strftime("%H:%M")]
+    })
+    try:
+        conn.update(worksheet="Sheet1", data=uj_sor)
+        st.success("✅ Írás OK! Frissítsd az oldalt, és nézd meg a Sheet-et.")
+        st.session_state.tesztelt = True
+        st.rerun()
+    except Exception as e:
+        st.error(f"❌ Írás hiba: {e}")
+
+# 3. Újraolvasás
+if st.button("🔄 Újra olvass be"):
+    st.rerun()
