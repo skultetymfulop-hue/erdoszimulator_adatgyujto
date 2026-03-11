@@ -229,25 +229,28 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
     progress_bar.empty()
     res_df = pd.DataFrame(all_runs_errors)
 
-    # 1. Először kapcsolódunk, hogy megkapjuk a következő ID-t
+   # --- JAVÍTOTT ADATÖSSZESÍTÉS ÉS MENTÉS ---
     try:
         conn = st.connection("gsheets", type=GSheetsConnection)
         target_sheet = "Sheet1"
+        
+        # 1. Adatok beolvasása az ID számításhoz
         try:
             existing_data = conn.read(worksheet=target_sheet, ttl=0)
         except:
             existing_data = pd.DataFrame()
 
+        # 2. Következő ID meghatározása
         if not existing_data.empty and "ID" in existing_data.columns:
             last_id = pd.to_numeric(existing_data["ID"], errors='coerce').max()
             new_id = int(last_id + 1) if not np.isnan(last_id) else 1
         else:
             new_id = 1
 
-        # 2. Most állítjuk össze a sort, immár a biztos ID-val és számmá alakított sűrűséggel
+        # 3. A sor összeállítása PONTOSAN a te oszlopneveiddel
         summary_row = {
             "ID": new_id,
-            "In_Sűrűség": float(in_intensity), 
+            "In_Sűrűség": float(in_intensity),
             "In_Csomósodás": int(in_grav_str),
             "In_Rágottság": int(in_chewed),
             "MAPE_Sűrűség_T (%)": round(float(res_df['err_dens_T'].mean() * 100), 2),
@@ -256,16 +259,23 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
             "MAPE_Rágottság_C (%)": round(float(res_df['err_chew_C'].mean() * 100), 2)
         }
 
-        # Megjelenítés
+        # Megjelenítés a felületen
         st.subheader("📋 Összesített mérési eredmény")
         st.dataframe(pd.DataFrame([summary_row]))
 
-        # Mentés
+        # 4. BIZTONSÁGI MENTÉS: Oszlopok kényszerített egyeztetése
         new_row_df = pd.DataFrame([summary_row])
-        updated_df = pd.concat([existing_data, new_row_df], ignore_index=True)
         
+        if not existing_data.empty:
+            # Csak azokat az oszlopokat tartjuk meg, amik a Sheets-ben is léteznek
+            new_row_df = new_row_df.reindex(columns=existing_data.columns)
+            updated_df = pd.concat([existing_data, new_row_df], ignore_index=True)
+        else:
+            updated_df = new_row_df
+
+        # Adatok feltöltése
         conn.update(worksheet=target_sheet, data=updated_df)
-        st.success(f"✅ Mentve a táblázatba! (ID: {new_id})")
+        st.success(f"✅ Sikeres mentés! Új sorszám: {new_id}")
 
     except Exception as e:
-        st.error(f"Hiba történt: {e}")
+        st.error(f"Hiba a mentés során: {e}")
