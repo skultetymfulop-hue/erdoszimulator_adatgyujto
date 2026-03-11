@@ -335,14 +335,14 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
         
         # A jelenlegi adatok beolvasása a táblázatból
         # (Fontos: a worksheet neve egyezzen a táblázat fülének nevével, pl. "")
-        existing_data = conn.read(worksheet="Munkalap1", ttl=0)
+        existing_data = conn.read(worksheet="Sheet1", ttl=0)
         
         # Az új sor hozzáadása a meglévőkhöz
         new_row_df = pd.DataFrame([summary_row])
         updated_df = pd.concat([existing_data, new_row_df], ignore_index=True)
         
         # A teljes táblázat frissítése az új sorral
-        conn.update(worksheet="Munkalap1", data=updated_df)
+        conn.update(worksheet="Sheet1", data=updated_df)
         
         st.success("✅ Az adatok automatikusan mentve a Google Táblázatba!")
     except Exception as e:
