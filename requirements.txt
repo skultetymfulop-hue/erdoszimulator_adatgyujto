@@ -5,3 +5,4 @@ scipy
 seaborn
 matplotlib
 plotly
+st-gsheets-connection
