@@ -1,8 +1,5 @@
-streamlit
-streamlit-gsheets-connection
-pandas
-numpy
-seaborn
-matplotlib
-scipy
-plotly
+streamlit==1.38.0
+numpy==1.26.4
+pandas==2.2.2
+scipy==1.13.1
+
