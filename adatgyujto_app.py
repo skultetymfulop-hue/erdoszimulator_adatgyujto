@@ -203,17 +203,17 @@ def get_gsheets_connection():
     return st.connection("gsheets", type=GSheetsConnection)
 
 # A "SZIMULÁCIÓ FUTTATÁSA" GOMB BELSEJÉBE (a my_bar.empty() UTÁN):
-    my_bar.empty()
+        my_bar.empty()
 
-    # === GOOGLE SHEETS MENTÉS === (ÚJ!)
+    # === GOOGLE SHEETS MENTÉS ===
     try:
         conn = get_gsheets_connection()
         
-        # Sorszám generálása (legnagyobb + 1)
+        # Sorszám generálása
         existing_data = conn.read()
         new_id = 1 if len(existing_data) == 0 else int(existing_data['ID'].max()) + 1
         
-        # ÖSSZES MAPE ÁTLEG
+        # Átlagos MAPE értékek
         avg_mape = {
             't_dens': errors_df['t_err_dens'].mean()*100,
             't_height': errors_df['t_err_height'].mean()*100,
@@ -223,30 +223,59 @@ def get_gsheets_connection():
             'c_chew': errors_df['c_err_chew'].mean()*100
         }
         
-        # MENTENDŐ SOR (slider paraméterek + MAPE + munkaidő)
+        # MENTENDŐ SOR
         sheet_row = {
             'ID': new_id,
             'Dátum': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'Sűrűség': f"{in_intensity:.5f}",
+            'Sűrűség': in_intensity,
             'Módusz': in_mode,
             'Shape': in_shape,
             'Gravitáció': in_grav_str,
             'Grav_pontok': in_grav_points,
             'Rágottság_%': in_chewed,
             'Futások': in_runs,
-            'KTT_%': p_ktt, 'Gy_%': p_gy, 'MJ_%': p_mj, 'MCs_%': p_mcs, 'BaBe_%': p_babe,
-            # MAPE értékek
-            'T_Dens_MAPE': f"{avg_mape['t_dens']:.2f}%",
-            'T_Height_MAPE': f"{avg_mape['t_height']:.2f}%",
-            'T_Chew_MAPE': f"{avg_mape['t_chew']:.2f}%",
-            'C_Dens_MAPE': f"{avg_mape['c_dens']:.2f}%",
-            'C_Height_MAPE': f"{avg_mape['c_height']:.2f}%",
-            'C_Chew_MAPE': f"{avg_mape['c_chew']:.2f}%",
+            'KTT_%': p_ktt, 'Gy_%': p_gy, 'MJ_%': p_mj, 
+            'MCs_%': p_mcs, 'BaBe_%': p_babe,
+            # MAPE
+            'T_Dens_MAPE': avg_mape['t_dens'],
+            'T_Height_MAPE': avg_mape['t_height'],
+            'T_Chew_MAPE': avg_mape['t_chew'],
+            'C_Dens_MAPE': avg_mape['c_dens'],
+            'C_Height_MAPE': avg_mape['c_height'],
+            'C_Chew_MAPE': avg_mape['c_chew'],
             # Munkaidő
-            'S_Munka_percek': f"{s_work:.1f}",
-            'T_Munka_percek': f"{t_work:.1f}",
-            'C_Munka_percek': f"{c_work:.1f}"
+            'S_Munka_percek': s_work,
+            'T_Munka_percek': t_work,
+            'C_Munka_percek': c_work
         }
+        
+        conn.update(data=pd.DataFrame([sheet_row]))
+        st.success(f"✅ Mentve! Sorszám: **{new_id}**")
+        
+    except Exception as e:
+        st.error(f"❌ Sheets hiba: {e}")
+
+    # === MAPE TÁBLÁZAT ===
+    st.subheader(f"📈 MAPE eredmények ({in_runs} futás)")
+    
+    mape_table = {
+        "Sorok (MAPE)": ["Sűrűség", "Magasság", "Rágottság"],
+        "Transzekt (T)": [
+            f"{errors_df['t_err_dens'].mean()*100:.2f}%", 
+            f"{errors_df['t_err_height'].mean()*100:.2f}%", 
+            f"{errors_df['t_err_chew'].mean()*100:.2f}%"
+        ],
+        "Mintakör (C)": [
+            f"{errors_df['c_err_dens'].mean()*100:.2f}%", 
+            f"{errors_df['c_err_height'].mean()*100:.2f}%", 
+            f"{errors_df['c_err_chew'].mean()*100:.2f}%"
+        ]
+    }
+    st.table(pd.DataFrame(mape_table))
+    
+    # Munkaidő összefoglaló
+    st.info(f"**Munkaidő:** S: {s_work:.1f} | T: {t_work:.1f} | C: {c_work:.1f} perc")
+
         
         # ÍRÁS A SHEETS-BE
         conn.update(data=pd.DataFrame([sheet_row]))
