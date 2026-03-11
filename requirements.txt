@@ -1,8 +1,5 @@
 streamlit
-numpy
 pandas
-scipy
-seaborn
-matplotlib
-plotly
-st-gsheets-connection
+numpy
+gspread
+oauth2client
