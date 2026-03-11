@@ -329,25 +329,30 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
     st.subheader("📋 Összesített mérési eredmény (100 futás átlaga)")
     st.dataframe(pd.DataFrame([summary_row]))
   
-    # --- GOOGLE SHEETS MENTÉS ---
+# --- GOOGLE SHEETS MENTÉS (HIBAJAVÍTOTT VERZIÓ) ---
     try:
-        # Kapcsolat létrehozása
         conn = st.connection("gsheets", type=GSheetsConnection)
-        
-        # FONTOS: Itt a tényleges fül nevét használd (Sheet1 vagy Munkalap1)
         target_sheet = "Sheet1" 
         
-        # A jelenlegi adatok beolvasása
-        existing_data = conn.read(worksheet=target_sheet, ttl=0)
+        # Megpróbáljuk beolvasni, de ha nem megy (pl. 404), üres táblázatot feltételezünk
+        try:
+            existing_data = conn.read(worksheet=target_sheet, ttl=0)
+        except Exception:
+            existing_data = pd.DataFrame()
         
-        # Az új sor hozzáadása
+        # Új sor hozzáadása
         new_row_df = pd.DataFrame([summary_row])
-        updated_df = pd.concat([existing_data, new_row_df], ignore_index=True)
         
-        # A teljes táblázat frissítése
+        if not existing_data.empty:
+            updated_df = pd.concat([existing_data, new_row_df], ignore_index=True)
+        else:
+            updated_df = new_row_df
+        
+        # Frissítés kényszerítése
         conn.update(worksheet=target_sheet, data=updated_df)
+        st.success(f"✅ Mentve a Google Táblázatba!")
         
-        st.success(f"✅ Az adatok automatikusan mentve a Google Táblázatba ({target_sheet})!")
     except Exception as e:
-        st.warning(f"⚠️ Megjelenítés sikerült, de a mentésnél hiba történt: {e}")
-        st.info(f"Ellenőrizd: 1. A fül neve pontosan '{target_sheet}'? 2. A 'Secrets' linkje jó? 3. Szerkesztési jogot adtál a link birtokosainak?")
+        st.error(f"Hiba történt: {e}")
+        # Kiírjuk a pontos hiba típusát a diagnózishoz
+        st.info("Próbáld meg frissíteni az oldalt (F5), néha a kapcsolat alaphelyzetbe állítása segít.")
