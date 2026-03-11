@@ -255,36 +255,4 @@ def get_gsheets_connection():
     except Exception as e:
         st.error(f"❌ Sheets hiba: {e}")
 
-    # === MAPE TÁBLÁZAT ===
-    st.subheader(f"📈 MAPE eredmények ({in_runs} futás)")
-    
-    mape_table = {
-        "Sorok (MAPE)": ["Sűrűség", "Magasság", "Rágottság"],
-        "Transzekt (T)": [
-            f"{errors_df['t_err_dens'].mean()*100:.2f}%", 
-            f"{errors_df['t_err_height'].mean()*100:.2f}%", 
-            f"{errors_df['t_err_chew'].mean()*100:.2f}%"
-        ],
-        "Mintakör (C)": [
-            f"{errors_df['c_err_dens'].mean()*100:.2f}%", 
-            f"{errors_df['c_err_height'].mean()*100:.2f}%", 
-            f"{errors_df['c_err_chew'].mean()*100:.2f}%"
-        ]
-    }
-    st.table(pd.DataFrame(mape_table))
-    
-    # Munkaidő összefoglaló
-    st.info(f"**Munkaidő:** S: {s_work:.1f} | T: {t_work:.1f} | C: {c_work:.1f} perc")
-
-        
-        # ÍRÁS A SHEETS-BE
-        conn.update(data=pd.DataFrame([sheet_row]))
-        st.success(f"✅ Adatok mentve! Sorszám: **{new_id}**")
-        
-    except Exception as e:
-        st.error(f"❌ Sheets mentés hiba: {e}")
-
-    # 1. LÉPÉS: Elmentjük az adatokat (session_state-be MÉG MINDIG)
-    st.session_state['forest_data'] = {
-        # ... meglévő adatok ...
-    }
+  
