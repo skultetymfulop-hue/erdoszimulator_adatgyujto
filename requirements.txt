@@ -1,0 +1,8 @@
+streamlit
+numpy
+pandas
+scipy
+seaborn
+matplotlib
+plotly
+streamlit-gsheets
