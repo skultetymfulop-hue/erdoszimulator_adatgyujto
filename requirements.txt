@@ -1,2 +1,8 @@
 streamlit
+streamlit-gsheets-connection
 pandas
+numpy
+seaborn
+matplotlib
+scipy
+plotly
