@@ -2,13 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import math
-import seaborn as sns
-import matplotlib.pyplot as plt
-from scipy import stats
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.patches as patches
-import plotly.express as px
-from streamlit_gsheets import GSheetsConnection  # ← EZT add hozzá!
+from streamlit_gsheets import GSheetsConnection
 
 # --- 1. ALAPBEÁLLÍTÁSOK ---
 st.set_page_config(page_title="Profi Erdő Szimulátor", layout="centered")
@@ -27,20 +21,14 @@ area_big_circle = math.pi * (r_big**2)
 area_small_circles = 4 * (math.pi * (r_small**2))
 L_transsect = math.sqrt(width**2 + height**2)
 
-species_colors = {
-    'KTT': '#1f77b4', 'Gy': '#2ca02c', 'MJ': '#ff7f0e', 'MCs': '#d62728', 'BaBe': '#9467bd'
-}
-
 def point_line_distance(x, y, x1, y1, x2, y2):
     num = abs((x2 - x1) * (y1 - y) - (x1 - x) * (y2 - y1))
     den = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
     return num / den
 
-# STABILABB: Átlag számítása súlyozva (Transzekthez) vagy anélkül
 def get_weighted_height_mean(df_subset, is_transzekt=False):
     if len(df_subset) == 0: return 0
     if is_transzekt:
-        # Horvitz-Thompson korrekció az átlaghoz: sum(h * 1/h) / sum(1/h) = n / sum(1/h)
         return len(df_subset) / (1 / df_subset['height']).sum()
     else:
         return df_subset['height'].mean()
@@ -51,19 +39,14 @@ def run_forest_simulation(params):
     grav_str = params['grav_str']
     n_grav = params['n_grav']
     
-    # 1. Cél darabszám
     expected_n = int(target_intensity * width * height)
     N_target = np.random.poisson(expected_n)
-    
-    # 2. DINAMIKUS POOL: Minél nagyobb a gravitáció, annál több "nyers" pont kell
-    # Erős csomósodásnál a pontok 90%-a is kieshet az R_core miatt a zsúfoltságban
-    multiplier = 2 + (grav_str * 2) # 0-ás erőnél 2x, 10-esnél 22x túlbiztosítás
+    multiplier = 2 + (grav_str * 2)
     N_pool = int(N_target * multiplier) + 500
     
     x_tmp = np.random.uniform(0, width, N_pool)
     y_tmp = np.random.uniform(0, height, N_pool)
     
-    # 3. Gravitációs súlyok
     grav_centers = np.random.uniform(0, width, (n_grav, 2))
     dist_all = np.array([np.sqrt((x_tmp - cx)**2 + (y_tmp - cy)**2) for cx, cy in grav_centers])
     min_dists = dist_all.min(axis=0)
@@ -72,39 +55,91 @@ def run_forest_simulation(params):
     weights = weights ** max(grav_str, 0.1)
     weights /= weights.max()
     
-    # 4. Súlyozott elfogadás
     mask = np.random.uniform(0, 1, N_pool) < weights
     accepted = np.column_stack((x_tmp[mask], y_tmp[mask]))
     
-    # 5. R_CORE SZŰRÉS (Optimalizáltabb maszkolással)
     final_keep = np.ones(len(accepted), dtype=bool)
     R_sq = R_core**2
     for i in range(len(accepted)):
         if not final_keep[i]: continue
-        # Csak a még élő pontokat nézzük
         d_sq = np.sum((accepted[i] - accepted[i+1:])**2, axis=1)
         final_keep[i+1:][d_sq < R_sq] = False
     
     valid_coords = accepted[final_keep]
     
-    # 6. VÉGSŐ LÉTSZÁM BEÁLLÍTÁSA
-    # Ha a durva szűrés után is több maradt, levágjuk a felesleget
     if len(valid_coords) > N_target:
         idx = np.random.choice(len(valid_coords), N_target, replace=False)
         final_coords = valid_coords[idx]
     else:
-        # Ha még így is kevés, akkor sajnos fizikai korlátba ütköztünk (nem fér el több fa)
         final_coords = valid_coords
-        # Opcionális: jelezzük a usernek, ha nem sikerült elérni a célt
-        # st.warning(f"Limit: Csak {len(final_coords)} fa fért el a sűrűsödési foltokban!")
 
     N_final = len(final_coords)
-  # === GOOGLE SHEETS KAPCSOLAT ===
+    
+    shape_k = params['shape_k']
+    target_mode = params['mode']
+    theta = target_mode / (shape_k - 1) if shape_k > 1 else target_mode
+    
+    raw_heights = np.random.gamma(shape=shape_k, scale=theta, size=N_final)
+    raw_heights = np.clip(raw_heights, min_height, max_height)
+    raw_heights.sort() 
+
+    if n_grav > 0 and grav_str > 0:
+        final_dist_all = np.array([np.sqrt((final_coords[:,0] - cx)**2 + (final_coords[:,1] - cy)**2) for cx, cy in grav_centers])
+        final_min_dists = final_dist_all.min(axis=0)
+        attraction_base = np.exp(-final_min_dists**2 / (2 * 200**2))
+        noise = np.random.normal(0, 0.15, N_final)
+        final_attraction = (attraction_base * (grav_str / 10)) + noise
+    else:
+        final_attraction = np.random.rand(N_final)
+
+    attraction_order = final_attraction.argsort() 
+    heights = np.zeros(N_final)
+    heights[attraction_order] = raw_heights
+
+    if N_final == 0:
+        return pd.DataFrame(columns=["X", "Y", "height", "species", "chewed", "T", "C"])
+
+    fajok = np.random.choice(params['sp_names'], size=N_final, p=params['sp_probs'])
+    ragottsag = np.random.uniform(0, 100, size=N_final) < params['chewed_p']
+    
+    results = []
+    for i in range(N_final):
+        x, y, h = float(final_coords[i,0]), float(final_coords[i,1]), float(heights[i])
+        
+        d_line = point_line_distance(x, y, 0, 0, width, height)
+        in_t = 1 if d_line <= h else 0
+        
+        in_c = 0
+        dist_to_center = math.sqrt((x - center_big[0])**2 + (y - center_big[1])**2)
+        if h > 50 and dist_to_center <= r_big: 
+            in_c = 1
+        elif h <= 50:
+            for cs in centers_small:
+                if math.sqrt((x - cs[0])**2 + (y - cs[1])**2) <= r_small: 
+                    in_c = 1
+                    break
+        
+        results.append({
+            "X": x, "Y": y, "height": h, "species": fajok[i], 
+            "chewed": int(ragottsag[i]), "T": in_t, "C": in_c
+        })
+    
+    return pd.DataFrame(results)
+
+# --- 3. GOOGLE SHEETS KAPCSOLAT ---
 @st.cache_resource
 def get_gsheets_connection():
     return st.connection("gsheets", type=GSheetsConnection)
 
-# === SIDEBAR BEÁLLÍTÁSOK ===
+# --- 4. FELHASZNÁLÓI FELÜLET ---
+st.title("🌲 Monitoring módszerek tesztelése szimulált környezetben")
+
+st.markdown("""
+Ez a szimulátor egy virtuális újulat csoportot generál, ahol a Transzektes és Mintakörös vadhatás monitoring módszereket tesztelheted.
+**Minden gombnyomásnál az eredmények automatikusan mentődnek Google Sheets-be!**
+""")
+
+# === SIDEBAR ===
 with st.sidebar:
     st.header("⚙️ Beállítások")
     in_intensity = st.slider("Cél sűrűség (db/cm²)", 0.00005, 0.005, 0.0020, step=0.00005, format="%.5f")
@@ -115,7 +150,6 @@ with st.sidebar:
     in_chewed = st.slider("Valódi rágottság (%)", 0, 100, 30)
     in_runs = st.slider("Szimulációs futások száma", 2, 100, 5)
 
-    # Fafaj százalékok
     if 'KTT' not in st.session_state: st.session_state['KTT'] = 20
     p_ktt = st.slider("Kocsánytalan Tölgy (%)", 0, 100, key='KTT')
     p_gy = st.slider("Gyertyán (%)", 0, 100, key='Gy')
@@ -123,8 +157,11 @@ with st.sidebar:
     p_mcs = st.slider("Madárcseresznye (%)", 0, 100, key='MCs')
     p_babe = max(0, 100 - (p_ktt + p_gy + p_mj + p_mcs))
     st.info(f"Barkóca Berkenye (maradék): {p_babe}%")
+    
+    st.markdown("---")
+    st.caption("**Készítette:** Skultéty Fülöp")
 
-# === SZIMULÁCIÓ GOMB === (EZ A HIÁNYZÓ RÉSZ!)
+# === SZIMULÁCIÓ GOMB ===
 if st.button("🚀 SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
     raw_probs = np.array([p_ktt, p_gy, p_mj, p_mcs, p_babe], dtype=float)
     corrected_probs = raw_probs / raw_probs.sum()
@@ -137,21 +174,19 @@ if st.button("🚀 SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
     }
 
     all_runs_errors = []
-    s_work = t_work = c_work = 0  # Inicializálás
+    s_work = t_work = c_work = 0
     
     my_bar = st.progress(0, text="Szimulációk futtatása...")
-
+    
     for i in range(in_runs):
         current_df = run_forest_simulation(sim_params)
         t_df = current_df[current_df['T'] == 1]
         c_df = current_df[current_df['C'] == 1]
         
-        # VALÓDI ÉRTÉKEK
         s_dens = len(current_df) / (width * height)
         s_height_avg = get_weighted_height_mean(current_df)
         s_chew = current_df['chewed'].mean() * 100
 
-        # TRANSZEKT
         if len(t_df) > 0:
             t_density = (1 / (2.0 * t_df['height'] * L_transsect)).sum()
             t_height_avg = get_weighted_height_mean(t_df, is_transzekt=True)
@@ -159,7 +194,6 @@ if st.button("🚀 SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
         else:
             t_density = t_height_avg = t_chew = 0.0
         
-        # MINTAKÖR
         c_small = c_df[c_df['height'] <= 50]
         c_large = c_df[c_df['height'] > 50]
         d_small = (len(c_small) / area_small_circles) if area_small_circles > 0 else 0
@@ -176,12 +210,10 @@ if st.button("🚀 SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
         else:
             c_height_avg = c_chew = 0
 
-        # Munkaidő (első futás alapján)
         s_work = (len(current_df) * 3.4) / 60
         t_work = (len(t_df) * 3.4) / 60
         c_work = (len(c_df) * 3.4) / 60
 
-        # MAPE
         all_runs_errors.append({
             't_err_dens': abs((s_dens - t_density) / s_dens) if s_dens > 0 else 0,
             't_err_height': abs((s_height_avg - t_height_avg) / s_height_avg) if s_height_avg > 0 else 0,
@@ -192,7 +224,6 @@ if st.button("🚀 SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
         })
         my_bar.progress((i + 1) / in_runs)
 
-    # **HIBAJAVÍTÁS: errors_df létrehozása**
     errors_df = pd.DataFrame(all_runs_errors)
     my_bar.empty()
 
@@ -217,32 +248,4 @@ if st.button("🚀 SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
             'Gravitáció': in_grav_str, 'Grav_pontok': in_grav_points, 'Rágottság_%': in_chewed,
             'Futások': in_runs, 'KTT_%': p_ktt, 'Gy_%': p_gy, 'MJ_%': p_mj, 
             'MCs_%': p_mcs, 'BaBe_%': p_babe,
-            'T_Dens_MAPE': avg_mape['t_dens'], 'T_Height_MAPE': avg_mape['t_height'],
-            'T_Chew_MAPE': avg_mape['t_chew'], 'C_Dens_MAPE': avg_mape['c_dens'],
-            'C_Height_MAPE': avg_mape['c_height'], 'C_Chew_MAPE': avg_mape['c_chew'],
-            'S_Munka_percek': s_work, 'T_Munka_percek': t_work, 'C_Munka_percek': c_work
-        }
-        
-        conn.update(data=pd.DataFrame([sheet_row]))
-        st.success(f"✅ Mentve! Sorszám: **{new_id}**")
-    except Exception as e:
-        st.error(f"❌ Sheets hiba: {e}")
-
-    # MAPE TÁBLÁZAT
-    st.subheader(f"📈 MAPE eredmények ({in_runs} futás)")
-    mape_table = {
-        "Sorok": ["Sűrűség", "Magasság", "Rágottság"],
-        "Transzekt (T)": [
-            f"{errors_df['t_err_dens'].mean()*100:.2f}%", 
-            f"{errors_df['t_err_height'].mean()*100:.2f}%", 
-            f"{errors_df['t_err_chew'].mean()*100:.2f}%"
-        ],
-        "Mintakör (C)": [
-            f"{errors_df['c_err_dens'].mean()*100:.2f}%", 
-            f"{errors_df['c_err_height'].mean()*100:.2f}%", 
-            f"{errors_df['c_err_chew'].mean()*100:.2f}%"
-        ]
-    }
-    st.table(pd.DataFrame(mape_table))
-    st.info(f"**Munkaidő:** S: {s_work:.1f} | T: {t_work:.1f} | C: {c_work:.1f} perc")
-
+            'T_Dens_MAPE': avg_mape['t_dens'], 'T_Height
