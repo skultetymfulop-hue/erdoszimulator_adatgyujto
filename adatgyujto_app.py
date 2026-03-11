@@ -321,10 +321,10 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
         "In_Sűrűség": f"{in_intensity:.5f}",
         "In_Csomósodás": in_grav_str,
         "In_Rágottság": in_chewed,
-        "MAPE_Sűrűség_T (%)": res_df['err_dens_T'].mean() * 100,
-        "MAPE_Rágottság_T (%)": res_df['err_chew_T'].mean() * 100,
-        "MAPE_Sűrűség_C (%)": res_df['err_dens_C'].mean() * 100,
-        "MAPE_Rágottság_C (%)": res_df['err_chew_C'].mean() * 100
+        "MAPE_Sűrűség_T (%)": float(res_df['err_dens_T'].mean() * 100),
+        "MAPE_Rágottság_T (%)": float(res_df['err_chew_T'].mean() * 100),
+        "MAPE_Sűrűség_C (%)": float(res_df['err_dens_C'].mean() * 100),
+        "MAPE_Rágottság_C (%)": float(res_df['err_chew_C'].mean() * 100)
     }
 
     st.subheader("📋 Összesített mérési eredmény (100 futás átlaga)")
