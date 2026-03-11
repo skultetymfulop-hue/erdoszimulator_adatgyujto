@@ -254,13 +254,13 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
         # A sor összeállítása
         summary_row = {
             "ID": new_id,
-            "In_Sűrűség": float(in_intensity),
-            "In_Csomósodás": int(in_grav_str),
-            "In_Rágottság": int(in_chewed),
-            "MAPE_Sűrűség_T (%)": round(float(res_df['err_dens_T'].mean() * 100), 2),
-            "MAPE_Rágottság_T (%)": round(float(res_df['err_chew_T'].mean() * 100), 2),
-            "MAPE_Sűrűség_C (%)": round(float(res_df['err_dens_C'].mean() * 100), 2),
-            "MAPE_Rágottság_C (%)": round(float(res_df['err_chew_C'].mean() * 100), 2)
+            "In_density": float(in_intensity),
+            "In_gravity": int(in_grav_str),
+            "In_chewed": int(in_chewed),
+            "MAPE_density": round(float(res_df['err_dens_T'].mean() * 100), 2),
+            "MAPE_vhewed": round(float(res_df['err_chew_T'].mean() * 100), 2),
+            "MAPE_gravity": round(float(res_df['err_dens_C'].mean() * 100), 2),
+            "MAPE_chewed": round(float(res_df['err_chew_C'].mean() * 100), 2)
         }
 
         # Eredmény megjelenítése
