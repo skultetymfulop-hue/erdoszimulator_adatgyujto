@@ -228,7 +228,7 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
     res_df = pd.DataFrame(all_runs_errors)
 
     summary_row = {
-        "ID": int(new_id)
+        #"ID": int(new_id)
         "In_Sűrűség": f"(in_intensity)",
         "In_Csomósodás": int(in_grav_str),
         "In_Rágottság": int(in_chewed),
