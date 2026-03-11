@@ -233,5 +233,36 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
         "In_Rágottság": int(in_chewed),
         "MAPE_Sűrűség_T (%)": round(float(res_df['err_dens_T'].mean() * 100), 2),
         "MAPE_Rágottság_T (%)": round(float(res_df['err_chew_T'].mean() * 100), 2),
-        "MAPE_Sűrűség_C (%)
-  
+        "MAPE_Sűrűség_C (%)": round(float(res_df['err_dens_C'].mean() * 100), 2),
+        "MAPE_Rágottság_C (%)": round(float(res_df['err_chew_C'].mean() * 100), 2)
+    }
+
+    st.subheader("📋 Összesített mérési eredmény")
+    st.dataframe(pd.DataFrame([summary_row]))
+
+    # --- GOOGLE SHEETS MENTÉS (Most már az IF blokkon BELÜL van!) ---
+    try:
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        target_sheet = "Sheet1"
+        
+        try:
+            existing_data = conn.read(worksheet=target_sheet, ttl=0)
+        except Exception:
+            existing_data = pd.DataFrame()
+
+        if not existing_data.empty and "ID" in existing_data.columns:
+            last_id = pd.to_numeric(existing_data["ID"]).max()
+            new_id = int(last_id + 1) if not np.isnan(last_id) else 1
+        else:
+            new_id = 1
+
+        summary_row["ID"] = new_id  # Hozzáadjuk az ID-t a mentés előtt
+        
+        new_row_df = pd.DataFrame([summary_row])
+        updated_df = pd.concat([existing_data, new_row_df], ignore_index=True)
+        
+        conn.update(worksheet=target_sheet, data=updated_df)
+        st.success(f"✅ Mentve! Új sorszám: {new_id}")
+
+    except Exception as e:
+        st.error(f"Hiba történt a sorszámozott mentésnél: {e}")
