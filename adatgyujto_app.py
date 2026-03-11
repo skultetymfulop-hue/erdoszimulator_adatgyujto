@@ -258,7 +258,7 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
             "In_gravity": int(in_grav_str),
             "In_chewed": int(in_chewed),
             "MAPE_density": round(float(res_df['err_dens_T'].mean() * 100), 2),
-            "MAPE_vhewed": round(float(res_df['err_chew_T'].mean() * 100), 2),
+            "MAPE_chewed": round(float(res_df['err_chew_T'].mean() * 100), 2),
             "MAPE_gravity": round(float(res_df['err_dens_C'].mean() * 100), 2),
             "MAPE_chewed": round(float(res_df['err_chew_C'].mean() * 100), 2)
         }
