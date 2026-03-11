@@ -343,11 +343,11 @@ if st.button("100 SZIMULÁCIÓ FUTTATÁSA ÉS ÖSSZESÍTÉSE", use_container_wid
         updated_df = pd.concat([existing_data, new_row_df], ignore_index=True)
         
         # A teljes táblázat frissítése az új sorral
-        conn.update(worksheet="Sheet1", data=updated_df)
+        conn.update(worksheet="Munkalap1", data=updated_df)
         
         st.success("✅ Az adatok automatikusan mentve a Google Táblázatba!")
     except Exception as e:
         st.warning(f"⚠️ Megjelenítés sikerült, de a Google Sheets mentésnél hiba történt: {e}")
-        st.info("Ellenőrizd, hogy a Google Táblázatod fülének neve 'Sheet1'-e, és a Megosztás beállításnál 'Szerkesztő' jogot adtál-e bárkinek, aki rendelkezik a linkkel.")
+        st.info("Ellenőrizd, hogy a Google Táblázatod fülének neve 'Munkalap1'-e, és a Megosztás beállításnál 'Szerkesztő' jogot adtál-e bárkinek, aki rendelkezik a linkkel.")
 
     
