@@ -436,6 +436,7 @@ result_df = pd.DataFrame([result_row])
 new_row_values = list(result_row.values())
     
 try:
+    existing_data = conn.read(worksheet="Sheet1")
     worksheet.append_row(new_row_values)
     st.success("✅ Adat közvetlenül hozzáfűzve a Google Sheet-hez!")
         
