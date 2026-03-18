@@ -441,7 +441,7 @@ try:
         
 # Opcionális: sorszám növelése a következő futáshoz
 st.session_state["run_counter"] += 1
-    except Exception as e:
+except Exception as e:
 st.error(f"Hiba a mentés során: {e}")
 
 st.subheader("📄 Futási összefoglaló táblázat")
