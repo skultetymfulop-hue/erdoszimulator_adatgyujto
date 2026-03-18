@@ -449,7 +449,6 @@ try:
     worksheet = spreadsheet.worksheet("Sheet1")
 
     # 3. Egyetlen sor hozzáfűzése
-    #new_row_values = [str(v) for v in result_row.values()] # Biztonság kedvéért stringként
     worksheet.append_row(new_row_values)
 
     st.success(f"✅ Adat ({run_id}) sikeresen hozzáfűzve a Google Sheet-hez!")
