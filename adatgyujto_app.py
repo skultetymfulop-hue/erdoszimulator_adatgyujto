@@ -9,6 +9,8 @@ from scipy import stats
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.patches as patches
 import plotly.express as px
+import gspread
+from google.oauth2.service_account import Credentials
 
 st.title("🧪 Google Sheets Kapcsolat Teszt")
 
@@ -409,7 +411,7 @@ if st.button("SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
 
 # Összegző táblázat
 result_row = {
-    "futas_ID": run_id,
+    "run_ID": run_id,
     "MAPE_density_T": mape_table["Transzekt (T)"][0],
     "MAPE_density_C": mape_table["Mintakör (C)"][0],
     "MAPE_height_avg_T": mape_table["Transzekt (T)"][1],
@@ -431,16 +433,16 @@ result_row = {
 }
 
 result_df = pd.DataFrame([result_row])
-
-# Meglévő adatok beolvasása, az új sor hozzáfűzése, majd visszatöltés
+new_row_values = list(result_row.values())
+    
 try:
-    existing_data = conn.read(worksheet="Sheet1") # Írd át a munkalap nevére!
-    updated_df = pd.concat([existing_data, result_df], ignore_index=True)
-    conn.update(worksheet="Sheet1", data=updated_df)
-    st.success("✅ Adatok sikeresen mentve a Google Sheets-be!")
+    worksheet.append_row(new_row_values)
+    st.success("✅ Adat közvetlenül hozzáfűzve a Google Sheet-hez!")
+        
+# Opcionális: sorszám növelése a következő futáshoz
+st.session_state["run_counter"] += 1
 except Exception as e:
-    st.error(f"❌ Hiba a mentés során: {e}")
-
+    st.error(f"Hiba a mentés során: {e}")
 
 st.subheader("📄 Futási összefoglaló táblázat")
 st.dataframe(result_df)
