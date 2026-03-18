@@ -426,7 +426,7 @@ st.dataframe(result_df)
     #st.subheader("📊 Az első futás részletes eredményei")
     #st.table(pd.DataFrame(summary_table))
   # 1. LÉPÉS: Elmentjük az adatokat (még a gomb behúzásán belül!)
-    st.session_state['forest_data'] = {
+st.session_state['forest_data'] = {
         'df': first_df,
         'mape': mape_table,
         'summary': summary_table,
