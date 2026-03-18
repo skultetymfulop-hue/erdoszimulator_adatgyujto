@@ -431,13 +431,13 @@ result_row = {
 }
 
 # Meglévő adatok beolvasása, az új sor hozzáfűzése, majd visszatöltés
-    try:
-        existing_data = conn.read(worksheet="Sheet1") # Írd át a munkalap nevére!
-        updated_df = pd.concat([existing_data, result_df], ignore_index=True)
-        conn.update(worksheet="Sheet1", data=updated_df)
-        st.success("✅ Adatok sikeresen mentve a Google Sheets-be!")
-    except Exception as e:
-        st.error(f"❌ Hiba a mentés során: {e}")
+try:
+    existing_data = conn.read(worksheet="Sheet1") # Írd át a munkalap nevére!
+    updated_df = pd.concat([existing_data, result_df], ignore_index=True)
+    conn.update(worksheet="Sheet1", data=updated_df)
+    st.success("✅ Adatok sikeresen mentve a Google Sheets-be!")
+except Exception as e:
+    st.error(f"❌ Hiba a mentés során: {e}")
 
 result_df = pd.DataFrame([result_row])
 
