@@ -426,7 +426,7 @@ result_row = {
     "gravity_strength": sim_params['grav_str'],
     "gravity_points": sim_params['n_grav'],
     "chewed_pc": sim_params['chewed_p'],
-    "nr_runs": run_counter,
+    "nr_runs": in_runs,
     "share_KTT": p_ktt,
     "share_Gy": p_gy,
     "share_MJ": p_mj,
