@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from streamlit_gsheets import GSheetsConnection
+from streamlit-gsheets import GSheetsConnection
 
 st.title("🧪 Google Sheets Kapcsolat Teszt")
 
