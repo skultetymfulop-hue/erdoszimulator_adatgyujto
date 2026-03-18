@@ -337,7 +337,7 @@ if st.button("SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
             c_height_avg = 0
             c_chew = 0
 
-        # MAPE számítás (Módusz helyett Átlagmagasságra a stabilitásért)
+        # APE számítás (Módusz helyett Átlagmagasságra a stabilitásért)
         all_runs_errors.append({
             't_err_dens': abs((s_dens - t_density) / s_dens) if s_dens > 0 else 0,
             't_err_height': abs((s_height_avg - t_height_avg) / s_height_avg) if s_height_avg > 0 else 0,
@@ -409,7 +409,7 @@ if st.button("SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
 
 result_row = {
     #"futas_ID": run_id,
-    "MAPE_density_T": errors_df['t_err_dens'].mean(),
+    "MAPE_density_T": all_runs_errors['t_err_dens'].mean(),
     "MAPE_density_C": errors_df['c_err_dens'].mean(),
     "MAPE_height_avg_T": errors_df['t_err_height'].mean(),
     "MAPE_height_avg_C": errors_df['c_err_height'].mean(),
