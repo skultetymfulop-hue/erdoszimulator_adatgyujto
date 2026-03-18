@@ -439,8 +439,8 @@ try:
     worksheet.append_row(new_row_values)
     st.success("✅ Adat közvetlenül hozzáfűzve a Google Sheet-hez!")
         
-# Opcionális: sorszám növelése a következő futáshoz
-st.session_state["run_counter"] += 1
+    # Opcionális: sorszám növelése a következő futáshoz
+    st.session_state["run_counter"] += 1
 except Exception as e:
 st.error(f"Hiba a mentés során: {e}")
 
