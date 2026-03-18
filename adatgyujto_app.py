@@ -408,10 +408,6 @@ if st.button("SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
     run_id = f"{st.session_state['run_counter']:04d}"
 
 # Összegző táblázat
-results_df = pd.DataFrame(mape_table)
-f"{errors_df['t_err_dens'].mean()*100:.2f}%",
-
-
 result_row = {
     "futas_ID": run_id,
     "MAPE_density_T": mape_table["Transzekt (T)"][0],
