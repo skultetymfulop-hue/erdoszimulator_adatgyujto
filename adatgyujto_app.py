@@ -11,7 +11,7 @@ import plotly.express as px
 
 # --- 1. ALAPBEÁLLÍTÁSOK ---
 st.set_page_config(page_title="Profi Erdő Szimulátor", layout="centered")
-if "run_counter" not in st.session_state
+if "run_counter" not in st.session_state:
     st.session_state["run_counter"] = 1
 
 width, height = 1500, 1500
