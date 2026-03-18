@@ -10,6 +10,15 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.patches as patches
 import plotly.express as px
 
+st.title("🧪 Google Sheets Kapcsolat Teszt")
+
+# Kapcsolat
+@st.cache_resource
+def get_connection():
+    return st.connection("gsheets", type=GSheetsConnection)
+
+conn = get_connection()
+
 # --- 1. ALAPBEÁLLÍTÁSOK ---
 st.set_page_config(page_title="Profi Erdő Szimulátor", layout="centered")
 if "run_counter" not in st.session_state:
@@ -399,7 +408,7 @@ if st.button("SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
     run_id = f"{st.session_state['run_counter']:04d}"
 
 result_row = {
-    "futas_ID": run_id,
+    #"futas_ID": run_id,
     "MAPE_density_T": errors_df['t_err_dens'].mean(),
     "MAPE_density_C": errors_df['c_err_dens'].mean(),
     "MAPE_height_avg_T": errors_df['t_err_height'].mean(),
