@@ -430,6 +430,8 @@ result_row = {
     "share_BaBe": p_babe
 }
 
+result_df = pd.DataFrame([result_row])
+
 # Meglévő adatok beolvasása, az új sor hozzáfűzése, majd visszatöltés
 try:
     existing_data = conn.read(worksheet="Sheet1") # Írd át a munkalap nevére!
@@ -439,7 +441,6 @@ try:
 except Exception as e:
     st.error(f"❌ Hiba a mentés során: {e}")
 
-result_df = pd.DataFrame([result_row])
 
 st.subheader("📄 Futási összefoglaló táblázat")
 st.dataframe(result_df)
