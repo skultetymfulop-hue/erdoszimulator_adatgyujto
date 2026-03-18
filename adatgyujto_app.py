@@ -436,25 +436,28 @@ result_df = pd.DataFrame([result_row])
 new_row_values = list(result_row.values())
     
 try:
-    # 1. Kinyerjük a nyers gspread klienst a már élő kapcsolatból
-    client = conn._instance.client
-    
-    # 2. Megnyitjuk a táblázatot a secrets-ben megadott URL/ID alapján
-    # (A streamlit-gsheets belsőleg a 'spreadsheet' kulcsot használja)
+    # 1. Hitelesítés felépítése a már megadott secrets-ből
+    creds_dict = st.secrets["connections"]["gsheets"]
+    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    client = gspread.authorize(creds)
+
+    # 2. Táblázat megnyitása az URL alapján
+    # Feltételezve, hogy a secrets-ben 'spreadsheet' kulcs alatt van az URL
     sheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
     spreadsheet = client.open_by_url(sheet_url)
     worksheet = spreadsheet.worksheet("Sheet1")
-    
-    # 3. Az adatokat listává alakítjuk és egyetlen hívással hozzáfűzzük
-    new_row_values = list(result_row.values())
+
+    # 3. Egyetlen sor hozzáfűzése
+    new_row_values = [str(v) for v in result_row.values()] # Biztonság kedvéért stringként
     worksheet.append_row(new_row_values)
-    
-    st.success(f"✅ A(z) {run_id} azonosítójú futás mentve a Google Sheet-be!")
+
+    st.success(f"✅ Adat ({run_id}) sikeresen hozzáfűzve a Google Sheet-hez!")
     st.session_state["run_counter"] += 1
 
 except Exception as e:
-    st.error(f"Hiba a közvetlen sormentés során: {e}")
-
+    st.error(f"Hiba a mentés során: {e}")
+    
 st.subheader("📄 Futási összefoglaló táblázat")
 st.dataframe(result_df)
     #st.subheader("📊 Az első futás részletes eredményei")
