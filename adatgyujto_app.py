@@ -422,7 +422,7 @@ result_row = {
     "MAPE_chewed_C": mape_table["Mintakör (C)"][2],
     "target_density": sim_params['intensity'],
     "height_mod": sim_params['mode'],
-    "shape_K": sim_params['shape_K'],
+    "shape_K": sim_params['shape_k'],
     "gravity_strength": sim_params['grav_str'],
     "gravity_points": sim_params['grav_points'],
     "chewed_pc": sim_params['chewed_p'],
