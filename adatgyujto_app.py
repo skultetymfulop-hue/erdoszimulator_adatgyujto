@@ -408,7 +408,7 @@ if st.button("SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
     run_id = f"{st.session_state['run_counter']:04d}"
 
 # Összegző táblázat
- results_df = pd.DataFrame(mape_table)
+results_df = pd.DataFrame(mape_table)
     f"{errors_df['t_err_dens'].mean()*100:.2f}%",
 
 
