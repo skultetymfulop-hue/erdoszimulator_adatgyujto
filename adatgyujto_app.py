@@ -436,14 +436,25 @@ result_df = pd.DataFrame([result_row])
 new_row_values = list(result_row.values())
     
 try:
-    existing_data = conn.read(worksheet="Sheet1")
+    # 1. Kinyerjük a nyers gspread klienst a már élő kapcsolatból
+    client = conn._instance.client
+    
+    # 2. Megnyitjuk a táblázatot a secrets-ben megadott URL/ID alapján
+    # (A streamlit-gsheets belsőleg a 'spreadsheet' kulcsot használja)
+    sheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+    spreadsheet = client.open_by_url(sheet_url)
+    worksheet = spreadsheet.worksheet("Sheet1")
+    
+    # 3. Az adatokat listává alakítjuk és egyetlen hívással hozzáfűzzük
+    new_row_values = list(result_row.values())
     worksheet.append_row(new_row_values)
-    st.success("✅ Adat közvetlenül hozzáfűzve a Google Sheet-hez!")
-        
-    # Opcionális: sorszám növelése a következő futáshoz
+    
+    st.success(f"✅ A(z) {run_id} azonosítójú futás mentve a Google Sheet-be!")
     st.session_state["run_counter"] += 1
+
 except Exception as e:
-    st.error(f"Hiba a mentés során: {e}")
+    st.error(f"Hiba a közvetlen sormentés során: {e}")
+
 st.subheader("📄 Futási összefoglaló táblázat")
 st.dataframe(result_df)
     #st.subheader("📊 Az első futás részletes eredményei")
