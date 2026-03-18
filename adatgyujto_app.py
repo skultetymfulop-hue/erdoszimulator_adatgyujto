@@ -424,7 +424,7 @@ result_row = {
     "height_mod": sim_params['mode'],
     "shape_K": sim_params['shape_k'],
     "gravity_strength": sim_params['grav_str'],
-    "gravity_points": sim_params['grav_points'],
+    "gravity_points": sim_params['n_grav'],
     "chewed_pc": sim_params['chewed_p'],
     "nr_runs": sim_params['runs'],
     "share_KTT": p_ktt,
