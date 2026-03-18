@@ -409,7 +409,7 @@ if st.button("SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
 
 # Összegző táblázat
 results_df = pd.DataFrame(mape_table)
-    f"{errors_df['t_err_dens'].mean()*100:.2f}%",
+f"{errors_df['t_err_dens'].mean()*100:.2f}%",
 
 
 result_row = {
