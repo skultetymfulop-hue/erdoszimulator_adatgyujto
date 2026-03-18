@@ -407,21 +407,26 @@ if st.button("SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
     }
     run_id = f"{st.session_state['run_counter']:04d}"
 
+# Összegző táblázat
+ results_df = pd.DataFrame(mape_table)
+    f"{errors_df['t_err_dens'].mean()*100:.2f}%",
+
+
 result_row = {
-    #"futas_ID": run_id,
-    "MAPE_density_T": all_runs_errors['t_err_dens'].mean(),
-    "MAPE_density_C": errors_df['c_err_dens'].mean(),
-    "MAPE_height_avg_T": errors_df['t_err_height'].mean(),
-    "MAPE_height_avg_C": errors_df['c_err_height'].mean(),
-    "MAPE_chewed_T": errors_df['t_err_chew'].mean(),
-    "MAPE_chewed_C": errors_df['c_err_chew'].mean(),
-    "target_density": in_intensity,
-    "height_mod": in_mode,
-    "shape_K": in_shape,
-    "gravity_strength": in_grav_str,
-    "gravity_points": in_grav_points,
-    "chewed_pc": in_chewed,
-    "nr_runs": in_runs,
+    "futas_ID": run_id,
+    "MAPE_density_T": mape_table["Transzekt (T)"][0],
+    "MAPE_density_C": mape_table["Mintakör (C)"][0],
+    "MAPE_height_avg_T": mape_table["Transzekt (T)"][1],
+    "MAPE_height_avg_C": mape_table["Mintakör (C)"][1],
+    "MAPE_chewed_T": mape_table["Transzekt (T)"][2],
+    "MAPE_chewed_C": mape_table["Mintakör (C)"][2],
+    "target_density": sim_params['intensity'],
+    "height_mod": sim_params['mode'],
+    "shape_K": sim_params['shape'],
+    "gravity_strength": sim_params['grav_str'],
+    "gravity_points": sim_params['grav_points'],
+    "chewed_pc": sim_params['chewed'],
+    "nr_runs": sim_params['runs'],
     "share_KTT": p_ktt,
     "share_Gy": p_gy,
     "share_MJ": p_mj,
