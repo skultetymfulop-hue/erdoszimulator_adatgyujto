@@ -49,6 +49,25 @@ def point_line_distance(x, y, x1, y1, x2, y2):
     den = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
     return num / den
 
+def calculate_diversity_indices(df_subset):
+    """Kiszámolja a Shannon-indexet és a Pielou-féle egyenletességet."""
+    if len(df_subset) == 0:
+        return 0.0, 0.0
+    
+    # Fajonkénti relatív gyakoriság (pi)
+    counts = df_subset['species'].value_counts()
+    n_total = len(df_subset)
+    pi = counts / n_total
+    
+    # Shannon-index: H' = -sum(pi * ln(pi))
+    shannon = -np.sum(pi * np.log(pi + 1e-9)) # 1e-9 a log(0) elkerülése miatt
+    
+    # Pielou-egyenletesség: J' = H' / ln(S)
+    S = len(counts)
+    pielou = shannon / np.log(S) if S > 1 else 0.0
+    
+    return float(shannon), float(pielou)
+
 # STABILABB: Átlag számítása súlyozva (Transzekthez) vagy anélkül
 def get_weighted_height_mean(df_subset, is_transzekt=False):
     if len(df_subset) == 0: return 0
@@ -339,14 +358,35 @@ if st.button("SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
             c_height_avg = 0
             c_chew = 0
 
+        # --- DIVERZITÁS SZÁMÍTÁSA ---
+        s_shannon, s_pielou = calculate_diversity_indices(current_df)
+        t_shannon, t_pielou = calculate_diversity_indices(t_df)
+        c_shannon, c_pielou = calculate_diversity_indices(c_df)
+
+        # Az első futás adatainak mentése a táblázathoz
+        if i == 0:
+            first_df = current_df
+            first_run_stats = {
+                'S_count': len(current_df), 'T_count': len(t_df), 'C_count': len(c_df),
+                'S_density': s_dens, 'T_density': t_density, 'C_density': c_dens,
+                'S_chewed': s_chew, 'T_chewed': t_chew, 'C_chewed': c_chew,
+                # Új indexek hozzáadása:
+                'S_shannon': s_shannon, 'S_pielou': s_pielou,
+                'T_shannon': t_shannon, 'T_pielou': t_pielou,
+                'C_shannon': c_shannon, 'C_pielou': c_pielou
+            }
+
         # APE számítás (Módusz helyett Átlagmagasságra a stabilitásért)
         all_runs_errors.append({
             't_err_dens': abs((s_dens - t_density) / s_dens) if s_dens > 0 else 0,
             't_err_height': abs((s_height_avg - t_height_avg) / s_height_avg) if s_height_avg > 0 else 0,
             't_err_chew': abs((s_chew - t_chew) / s_chew) if s_chew > 0 else 0,
+            't_err_pielou': abs((s_pielou - t_pielou) / s_pielou) if s_pielou > 0 else 0,
+            
             'c_err_dens': abs((s_dens - c_dens) / s_dens) if s_dens > 0 else 0,
             'c_err_height': abs((s_height_avg - c_height_avg) / s_height_avg) if s_height_avg > 0 else 0,
-            'c_err_chew': abs((s_chew - c_chew) / s_chew) if s_chew > 0 else 0
+            'c_err_chew': abs((s_chew - c_chew) / s_chew) if s_chew > 0 else 0,
+            'c_err_pielou': abs((s_pielou - c_pielou) / s_pielou) if s_pielou > 0 else 0
         })
 
         if i == 0:
@@ -354,7 +394,9 @@ if st.button("SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
             first_run_stats = {
                 'S_count': len(current_df), 'T_count': len(t_df), 'C_count': len(c_df),
                 'S_density': s_dens, 'T_density': t_density, 'C_density': c_dens,
-                'S_chewed': s_chew, 'T_chewed': t_chew, 'C_chewed': c_chew
+                'S_chewed': s_chew, 'T_chewed': t_chew, 'C_chewed': c_chew,
+                'S_shannon': s_shannon, 'T_shannon': t_shannon, 'C_shannon': c_shannon,
+                'S_pielou': s_pielou, 'T_pielou': t_pielou, 'C_pielou': c_pielou
             }
         my_bar.progress((i + 1) / in_runs)
 
@@ -363,16 +405,18 @@ if st.button("SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
     # --- TÁBLÁZATOK ---
     errors_df = pd.DataFrame(all_runs_errors)
     mape_table = {
-        "Sorok (MAPE)": ["MAPE_density", "MAPE_height_avg", "MAPE_chewed"],
+        "Sorok (MAPE)": ["MAPE_density", "MAPE_height_avg", "MAPE_chewed", "MAPE_pielou"],
         "Transzekt (T)": [
             f"{errors_df['t_err_dens'].mean()*100:.2f}%", 
             f"{errors_df['t_err_height'].mean()*100:.2f}%", 
-            f"{errors_df['t_err_chew'].mean()*100:.2f}%"
+            f"{errors_df['t_err_chew'].mean()*100:.2f}%",
+            f"{errors_df['t_err_pielou'].mean()*100:.2f}%"
         ],
         "Mintakör (C)": [
             f"{errors_df['c_err_dens'].mean()*100:.2f}%", 
             f"{errors_df['c_err_height'].mean()*100:.2f}%", 
-            f"{errors_df['c_err_chew'].mean()*100:.2f}%"
+            f"{errors_df['c_err_chew'].mean()*100:.2f}%",
+            f"{errors_df['c_err_pielou'].mean()*100:.2f}%"
         ]
     }
     #st.subheader(f"📈 MAPE eredmények ({in_runs} futás alapján)")
@@ -418,6 +462,8 @@ result_row = {
     "MAPE_height_avg_C": mape_table["Mintakör (C)"][1],
     "MAPE_chewed_T": mape_table["Transzekt (T)"][2],
     "MAPE_chewed_C": mape_table["Mintakör (C)"][2],
+    "MAPE_pielou_T": mape_tabel["Transzekt (T)"][3]
+    "MAPE_pielou_C": mape_tabel["Mintakör (C)"][3]
     "target_density": sim_params['intensity'],
     "height_mod": sim_params['mode'],
     "shape_K": sim_params['shape_k'],
