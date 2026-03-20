@@ -193,7 +193,7 @@ def run_forest_simulation(params):
             "chewed": int(ragottsag[i]), "T": in_t, "C": in_c
         })
     
-    return pd.DataFrame(results)
+    #return pd.DataFrame(results) lehet hogy kelleni fog!!!
 
     # Generáljuk a maradék adatokat
     fajok = np.random.choice(params['sp_names'], size=N_final, p=params['sp_probs'])
