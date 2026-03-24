@@ -480,7 +480,7 @@ result_row = {
     "MAPE_height_avg_T": mape_table["Transzekt (T)"][1],
     "MAPE_height_avg_C": mape_table["Mintakör (C)"][1],
     "MAPE_chewed_T": mape_table["Transzekt (T)"][2],
-    "MAPE_chewed_C": mape_table["Mintakör (C)"][2],s
+    "MAPE_chewed_C": mape_table["Mintakör (C)"][2],
     "MAPE_pielou_T": mape_table["Transzekt (T)"][3],
     "MAPE_pielou_C": mape_table["Mintakör (C)"][3],
     "target_density": sim_params['intensity'],
