@@ -314,10 +314,20 @@ if st.button("SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
     first_df = None
     my_bar = st.progress(0, text="Szimulációk futtatása...")
 
+    #Listák az átlagos darabszámok gyűjtéséhez 
+    all_S_counts = []
+    all_T_counts = []
+    all_C_counts = []
+
     for i in range(in_runs):
         current_df = run_forest_simulation(sim_params)
         t_df = current_df[current_df['T'] == 1]
         c_df = current_df[current_df['C'] == 1]
+
+        # Minden futásnál elmentjük, hány fa volt 
+        all_S_counts.append(len(current_df))
+        all_T_counts.append(len(t_df))
+        all_C_counts.append(len(c_df))
         
         # 1. VALÓDI ÉRTÉKEK
         s_dens = len(current_df) / (width * height)
@@ -402,7 +412,18 @@ if st.button("SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
 
     my_bar.empty()
 
+    # Átlagok kiszámítása 
+    avg_S_n = sum(all_S_counts) / in_runs
+    avg_T_n = sum(all_T_counts) / in_runs
+    avg_C_n = sum(all_C_counts) / in_runs
+
     # --- TÁBLÁZATOK ---
+    st.subheader("📊 Átlagos mintavételi intenzitás")
+c1, c2, c3 = st.columns(3)
+c1.metric("Összes fa (S)", f"{avg_S_n:.1f} db")
+c2.metric("Transzekt fa (T)", f"{avg_T_n:.1f} db")
+c3.metric("Mintakör fa (C)", f"{avg_C_n:.1f} db")
+
     errors_df = pd.DataFrame(all_runs_errors)
     mape_table = {
         "Sorok (MAPE)": ["MAPE_density", "MAPE_height_avg", "MAPE_chewed", "MAPE_pielou"],
@@ -456,6 +477,9 @@ if st.button("SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
 # Összegző táblázat
 result_row = {
     "run_ID": run_id,
+    "avg_total_trees": avg_S_n,     
+    "avg_transsect_trees": avg_T_n, 
+    "avg_circle_trees": avg_C_n,    
     "MAPE_density_T": mape_table["Transzekt (T)"][0],
     "MAPE_density_C": mape_table["Mintakör (C)"][0],
     "MAPE_height_avg_T": mape_table["Transzekt (T)"][1],
