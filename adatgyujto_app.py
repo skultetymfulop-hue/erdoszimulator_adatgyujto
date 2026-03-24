@@ -417,12 +417,7 @@ if st.button("SZIMULÁCIÓ FUTTATÁSA", use_container_width=True):
     avg_T_n = sum(all_T_counts) / in_runs
     avg_C_n = sum(all_C_counts) / in_runs
 
-    # --- TÁBLÁZATOK ---
-    st.subheader("📊 Átlagos mintavételi intenzitás")
-c1, c2, c3 = st.columns(3)
-c1.metric("Összes fa (S)", f"{avg_S_n:.1f} db")
-c2.metric("Transzekt fa (T)", f"{avg_T_n:.1f} db")
-c3.metric("Mintakör fa (C)", f"{avg_C_n:.1f} db")
+  
 
     errors_df = pd.DataFrame(all_runs_errors)
     mape_table = {
