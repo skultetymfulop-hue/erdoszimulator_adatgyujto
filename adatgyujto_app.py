@@ -12,7 +12,7 @@ import plotly.express as px
 import gspread
 from google.oauth2.service_account import Credentials
 
-st.title("🧪 Google Sheets Kapcsolat Teszt")
+st.title("🧪 Google Sheets Kapcsolat")
 
 # Kapcsolat
 @st.cache_resource
